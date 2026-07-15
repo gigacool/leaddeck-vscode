@@ -6,7 +6,16 @@ Not a task tracker — an efficiency instrument for someone carrying 10–20 par
 
 ## Status
 
-**Foundation.** `model/` and `store/` are built and tested. `derive/` and `surface/` are next.
+**All four layers built.** 87 tests. Press `F5` to run it.
+
+| | |
+|---|---|
+| `Ctrl+Alt+L` | capture — from anywhere, without leaving what you're doing |
+| `Ctrl+Alt+K` | open the workbench |
+
+A command + keybinding is the entry point on purpose: an Activity Bar icon **cannot** open an editor webview, and the sidebar's width fights the shelf — 17 projects and 63 tasks have to fit above the fold.
+
+**Not built yet:** the editor sheet (FR-23–28), the `＋` rail, commit-to-week from the shelf, the burndown, the six-week stepper, export.
 
 ## The laws
 

@@ -1,0 +1,14 @@
+{
+  // The webview runs in a browser: DOM, no Node.
+  //
+  // Split from the host config deliberately. If both halves shared one lib set,
+  // a `document` reference in host code would typecheck and then fail at
+  // runtime -- and a `node:fs` import in the webview would do the same. The two
+  // configs are what make that mistake impossible rather than merely unlikely.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM"],
+    "types": []
+  },
+  "include": ["src/surface/webview/**/*.ts", "src/model/**/*.ts", "src/derive/**/*.ts"]
+}
