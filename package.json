@@ -1,0 +1,64 @@
+{
+  "name": "leaddeck",
+  "displayName": "LeadDeck",
+  "description": "Capture, organize, review, engage. One webview.",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "publisher": "cedric",
+  "engines": {
+    "vscode": "^1.105.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "package": "node esbuild.mjs --production",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/**/*.test.ts",
+    "check": "npm run typecheck && npm run test"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "leaddeck.capture",
+        "title": "LeadDeck: Capture"
+      },
+      {
+        "command": "leaddeck.open",
+        "title": "LeadDeck: Open Workbench"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "leaddeck.capture",
+        "key": "ctrl+alt+l",
+        "mac": "cmd+alt+l"
+      },
+      {
+        "command": "leaddeck.open",
+        "key": "ctrl+alt+k",
+        "mac": "cmd+alt+k"
+      }
+    ],
+    "configuration": {
+      "title": "LeadDeck",
+      "properties": {
+        "leaddeck.storagePath": {
+          "type": "string",
+          "default": "",
+          "description": "Storage root. Empty means ~/LeadDeck. A .leaddeck folder in the workspace overrides both (AD-6)."
+        }
+      }
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/vscode": "^1.105.0",
+    "esbuild": "^0.28.1",
+    "typescript": "^7.0.2"
+  }
+}
