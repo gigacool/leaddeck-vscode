@@ -14,7 +14,12 @@ const watch = process.argv.includes("--watch");
 const targets = [
   {
     entryPoints: ["src/surface/extension.ts"],
-    outfile: "dist/extension.js",
+    // .cjs, not .js: package.json says "type":"module" (so Node runs the tests
+    // and this script as ESM), but a VS Code extension host loads its entry
+    // with require(). The extension overrides the package type per-file --
+    // without it, Node refuses the CJS bundle and the extension dies on
+    // activation.
+    outfile: "dist/extension.cjs",
     platform: "node",
     format: "cjs",
     external: ["vscode"],

@@ -12,7 +12,7 @@
   "categories": [
     "Other"
   ],
-  "main": "./dist/extension.js",
+  "main": "./dist/extension.cjs",
   "scripts": {
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
