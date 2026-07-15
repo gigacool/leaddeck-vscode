@@ -160,12 +160,16 @@ function drainEl(d: NonNullable<BacklogVm["drain"]>): HTMLElement {
     row.append(el("span", "txt", c.text));
     row.append(el("span", "when", c.ageDays === 0 ? "today" : `${c.ageDays}d`));
 
+    // All resolutions are peers. Create is not privileged, and neither is death.
     const acts = el("div", "acts");
     const task = el("button", "btn pri", "→ task");
     task.onclick = () => post({ type: "resolveCapture", id: c.id, to: "task" });
+    const project = el("button", "btn", "→ project");
+    project.title = "it is not a task — it is a whole thing";
+    project.onclick = () => post({ type: "resolveCapture", id: c.id, to: "project" });
     const bin = el("button", "btn death", "let it die");
     bin.onclick = () => post({ type: "resolveCapture", id: c.id, to: "bin", reason: "outdated" });
-    acts.append(task, bin);
+    acts.append(task, project, bin);
     row.append(acts);
     list.append(row);
   }
@@ -188,7 +192,13 @@ function backlogEl(b: BacklogVm): HTMLElement {
     if (band.kind === "unsorted" && b.drain) shelf.append(drainEl(b.drain));
   }
   if (b.bands.length === 0) {
-    shelf.append(el("div", "empty", "nothing on the shelf"));
+    // Not onboarding — a stated fact. He is not a stranger to his own tool, but
+    // an empty screen reads as broken, and "empty" and "broken" must not look
+    // the same. The chord comes from the host: it is platform-resolved, and
+    // `derive/` cannot reach `vscode` to know it.
+    shelf.append(
+      el("div", "empty", `no projects, no tasks, nothing captured — ${b.captureChord} to capture`),
+    );
   }
   return shelf;
 }

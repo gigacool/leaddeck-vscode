@@ -65,6 +65,10 @@ export class Workbench {
       drainOpen: false,
       root: store.root,
       rootKind,
+      // Platform-resolved here, because only this layer knows the platform.
+      // EXPERIENCE.md writes every chord in Mac notation; Cédric is on Windows,
+      // where Ctrl+F / Ctrl+W / Ctrl+L are already VS Code's.
+      captureChord: process.platform === "darwin" ? "⌘⌥L" : "Ctrl+Alt+L",
     }, reportDir);
     panel.webview.html = wb.#html(ctx);
     Workbench.current = wb;
@@ -172,7 +176,7 @@ export class Workbench {
     m: Extract<WebviewMessage, { type: "resolveCapture" }>,
     now: Date,
   ): Promise<void> {
-    const { newTaskId } = await import("../model/ids.ts");
+    const { newProjectId, newTaskId } = await import("../model/ids.ts");
     const { INBOX_PROJECT_ID } = await import("../model/types.ts");
 
     await this.#store.mutate((d) => {
@@ -182,6 +186,24 @@ export class Workbench {
       if (m.to === "bin") {
         c.state = "resolved";
         return { touched: ["captures"] };
+      }
+
+      if (m.to === "project") {
+        // A project has ONE deadline and no status. Bare is fine — a bare thing
+        // is a finished thing, and an empty field is a chore.
+        d.projects.push({
+          id: newProjectId(),
+          title: c.text,
+          description: "",
+          deadline: null,
+          stakeholders: [],
+          tags: [],
+          logMessages: [],
+        });
+        c.state = "resolved";
+        // resolvedTo is a TaskId. A project resolution has no task, so the
+        // self-heal cannot key on it — hence creator-before-consumer below.
+        return { touched: ["projects", "captures"] };
       }
 
       // AD-13: the task is CREATED before the capture is CONSUMED. A crash
@@ -199,6 +221,8 @@ export class Workbench {
         stakeholders: [],
         tags: [],
         committed: null,
+        // A stamp, not a computation (AD-4). Nothing else can produce it, and
+        // urgency reads it.
         todoSince: toDay(now),
         doneAt: null,
         death: null,

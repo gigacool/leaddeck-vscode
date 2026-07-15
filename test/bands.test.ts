@@ -39,19 +39,32 @@ test("the nag carries the count and the age of the oldest capture (FR-5)", () =>
   assert.equal(unsorted.oldestCaptureDays, 6);
 });
 
-test("captures are NOT strips — the Inbox never renders as a project", () => {
-  // A band is not a project. This is what keeps "one pip = one real task" true
-  // for every strip, and keeps Capture out of the Task model.
+test("a CAPTURE is a raw pip on the band; a TASK on Inbox is a strip", () => {
+  // The two must not be confused. A band is not a project -- that is what keeps
+  // "one pip = one real task" true for every strip. But a capture RESOLVED into
+  // a task stops being a capture, so it has to leave the band and appear on the
+  // Inbox strip. Skipping Inbox made resolved captures vanish.
   const d = dataset({
-    tasks: [aTask({ project: INBOX_PROJECT_ID })],
+    tasks: [aTask({ project: INBOX_PROJECT_ID, title: "resolved into a task" })],
     captures: [aCapture()],
   });
   const bands = shelf(d, NOW);
-  for (const b of bands) {
-    for (const s of b.strips) {
-      assert.notEqual(s.project.id, INBOX_PROJECT_ID);
-    }
-  }
+
+  const unsorted = bands.find((b) => b.def.kind === "unsorted")!;
+  assert.equal(unsorted.captureCount, 1);
+  assert.equal(unsorted.strips.length, 0, "a capture is never a strip");
+
+  const inbox = bands.flatMap((b) => b.strips).find((s) => s.project.id === INBOX_PROJECT_ID);
+  assert.ok(inbox, "a task with no project must be visible on the Inbox strip");
+  assert.equal(inbox.tasks.length, 1);
+});
+
+test("an empty Inbox renders no strip — like every other project", () => {
+  const d = dataset({ captures: [aCapture()] });
+  const inbox = shelf(d, NOW)
+    .flatMap((b) => b.strips)
+    .find((s) => s.project.id === INBOX_PROJECT_ID);
+  assert.equal(inbox, undefined);
 });
 
 test("a resolved capture stops nagging", () => {

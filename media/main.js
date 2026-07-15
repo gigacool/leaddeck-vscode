@@ -101,9 +101,12 @@
       const acts = el("div", "acts");
       const task = el("button", "btn pri", "\u2192 task");
       task.onclick = () => post({ type: "resolveCapture", id: c.id, to: "task" });
+      const project = el("button", "btn", "\u2192 project");
+      project.title = "it is not a task \u2014 it is a whole thing";
+      project.onclick = () => post({ type: "resolveCapture", id: c.id, to: "project" });
       const bin = el("button", "btn death", "let it die");
       bin.onclick = () => post({ type: "resolveCapture", id: c.id, to: "bin", reason: "outdated" });
-      acts.append(task, bin);
+      acts.append(task, project, bin);
       row.append(acts);
       list.append(row);
     }
@@ -123,7 +126,9 @@
       if (band.kind === "unsorted" && b.drain) shelf.append(drainEl(b.drain));
     }
     if (b.bands.length === 0) {
-      shelf.append(el("div", "empty", "nothing on the shelf"));
+      shelf.append(
+        el("div", "empty", `no projects, no tasks, nothing captured \u2014 ${b.captureChord} to capture`)
+      );
     }
     return shelf;
   }

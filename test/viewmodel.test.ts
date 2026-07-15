@@ -10,6 +10,7 @@ const ui = (over: Partial<UiState> = {}): UiState => ({
   drainOpen: false,
   root: "/home/cedric/LeadDeck",
   rootKind: "home",
+  captureChord: "Ctrl+Alt+L",
   ...over,
 });
 
@@ -56,6 +57,29 @@ test("resolve 3, leave 8 — the count reads 8, and nothing is abandoned", () =>
   const b = backlogVm(d, NOW, WEEK, true);
   assert.equal(b.drain!.captures.length, 8);
   assert.equal(b.bands[0]!.count, 8);
+});
+
+test("a capture resolved to a task becomes VISIBLE — the first-run bug", () => {
+  // Found by actually running it: capture worked, the task was written, and the
+  // shelf drew nothing. A task on pj_inbox is a real task and must appear.
+  const d = dataset({
+    tasks: [aTask({ project: "pj_inbox" as never, title: "comex deck — Q3 numbers" })],
+  });
+  const pips = backlogVm(d, NOW, WEEK, false).bands.flatMap((b) => b.strips.flatMap((s) => s.pips));
+  assert.equal(pips.length, 1);
+  assert.equal(pips[0]!.title, "comex deck — Q3 numbers");
+});
+
+test("the rule bar counts the Inbox strip too — the denominator must not lie", () => {
+  const p = aProject();
+  const d = dataset({
+    projects: [...dataset().projects, p],
+    tasks: [aTask({ project: "pj_inbox" as never }), aTask({ project: p.id })],
+  });
+  // 2 projects with living work, 2 shown: nothing is hidden, so the bar must
+  // not claim otherwise.
+  assert.match(backlogVm(d, NOW, WEEK, false).rule, /showing the 2 items/);
+  assert.doesNotMatch(backlogVm(d, NOW, WEEK, false).rule, /not shown/);
 });
 
 test("every band carries a stated predicate — the webview never invents one", () => {

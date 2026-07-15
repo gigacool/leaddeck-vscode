@@ -1,5 +1,5 @@
 import { daysBetween, toDay } from "../model/dates.ts";
-import { INBOX_PROJECT_ID, type Day, type Dataset, type Project, type Task } from "../model/types.ts";
+import type { Day, Dataset, Project, Task } from "../model/types.ts";
 import { isOpen, urgencyOf, urgencyRank, type UrgencySignal } from "./urgency.ts";
 
 /**
@@ -106,18 +106,24 @@ function captureAgeDays(capturedAt: string, now: Day): number {
 /**
  * The shelf: every project as a strip, grouped into computed bands.
  *
- * The Inbox project never appears as a strip — captures live in the Unsorted
- * band as raw pips, with no strip beneath them. A band is not a project. That
- * is what keeps "one pip = one real task" true for every strip, and keeps
- * Capture out of the Task model.
+ * Two different things sit near each other here and must not be confused:
+ *
+ *   - The UNSORTED BAND carries raw pips for CAPTURES — things that are not yet
+ *     tasks. A band is not a project, which is what keeps "one pip = one real
+ *     task" true for every strip and keeps Capture out of the Task model.
+ *   - The INBOX STRIP carries real TASKS that have no project yet. It is an
+ *     ordinary strip and renders like any other.
+ *
+ * A capture resolved into a task stops being a capture and becomes a task on
+ * `pj_inbox` — so it must leave the band and appear on the strip. Skipping the
+ * Inbox project here made resolved captures vanish into a project nothing drew.
+ * Like every strip, it disappears when it holds no living work.
  */
 export function shelf(data: Dataset, now: Day): Band[] {
   const byKind = new Map<BandKind, ProjectStrip[]>();
   for (const def of BANDS) byKind.set(def.kind, []);
 
   for (const project of data.projects) {
-    if (project.id === INBOX_PROJECT_ID) continue;
-
     const tasks = data.tasks.filter((t) => t.project === project.id);
     if (tasks.length === 0) continue;
 

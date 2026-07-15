@@ -29,6 +29,11 @@ export interface UiState {
   drainOpen: boolean;
   root: string;
   rootKind: "local" | "configured" | "home";
+  /**
+   * Passed in, never derived. Chords are platform-specific and live in
+   * `surface/` — this layer cannot import `vscode` to find out (AD-3).
+   */
+  captureChord: string;
 }
 
 const STALE_DAYS = 14;
@@ -72,7 +77,13 @@ function whoVm(task: Task[], data: Dataset): StripVm["who"] {
   return null;
 }
 
-export function backlogVm(data: Dataset, now: Day, week: Week, drainOpen: boolean): BacklogVm {
+export function backlogVm(
+  data: Dataset,
+  now: Day,
+  week: Week,
+  drainOpen: boolean,
+  captureChord = "Ctrl+Alt+L",
+): BacklogVm {
   const bands = shelf(data, now);
   const unsorted = data.captures.filter((c) => c.state === "unsorted");
 
@@ -109,11 +120,12 @@ export function backlogVm(data: Dataset, now: Day, week: Week, drainOpen: boolea
   }));
 
   const shownProjects = vm.reduce((n, b) => n + b.strips.length, 0);
-  const totalProjects = data.projects.filter((p) => p.id !== "pj_inbox").length;
+  const totalProjects = data.projects.length;
 
   return {
     bands: vm,
     rule: ruleBar(shownProjects, totalProjects, "they have living work"),
+    captureChord,
     drain: drainOpen
       ? {
           captures: unsorted.map((c) => ({
@@ -260,7 +272,10 @@ export function buildViewModel(
     mode: ui.mode,
     root: ui.root,
     rootKind: ui.rootKind,
-    backlog: ui.mode === "backlog" ? backlogVm(data, now, week, ui.drainOpen) : null,
+    backlog:
+      ui.mode === "backlog"
+        ? backlogVm(data, now, week, ui.drainOpen, ui.captureChord)
+        : null,
     kanban: ui.mode === "kanban" ? kanbanVm(data, now, week) : null,
     report: ui.mode === "report" ? reportVm(data, now, week, reportPath) : null,
   };

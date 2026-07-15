@@ -62,6 +62,11 @@ export interface BacklogVm {
   rule: string;
   /** The drain is a SUB-STATE of backlog, never a sibling mode. */
   drain: DrainVm | null;
+  /**
+   * Rendered in mono, so it is a computed fact. Platform-resolved — the chords
+   * differ per OS, and `derive/` cannot reach `vscode` to know which.
+   */
+  captureChord: string;
 }
 
 export interface DrainVm {
@@ -114,7 +119,13 @@ export type WebviewMessage =
   | { type: "setMode"; mode: Mode }
   | { type: "openDrain" }
   | { type: "closeDrain" }
-  | { type: "resolveCapture"; id: CaptureId; to: "task" | "bin"; reason?: string }
+  /**
+   * The drain's resolutions. `project` promotes the capture into a new Project
+   * — organizing IS deciding what a thing is, and "it's a new thing" is one of
+   * the answers. It lives here rather than on its own surface, because the
+   * fourth mode is how v1 became five panels.
+   */
+  | { type: "resolveCapture"; id: CaptureId; to: "task" | "project" | "bin"; reason?: string }
   | { type: "setStatus"; id: TaskId; status: "todo" | "doing" | "done" }
   | { type: "commit"; id: TaskId }
   | { type: "uncommit"; id: TaskId }
