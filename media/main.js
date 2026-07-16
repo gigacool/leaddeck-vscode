@@ -504,8 +504,10 @@
     pg.append(week);
     const openBtn = el("button", "btn", `\u29C9 open ${r.reportPath}`);
     openBtn.onclick = () => post({ type: "openReport" });
-    const foot = el("div", "rp-note");
-    foot.append(openBtn);
+    const exportBtn = el("button", "btn", "\u2913 export data");
+    exportBtn.onclick = () => post({ type: "export" });
+    const foot = el("div", "rp-note foot-actions");
+    foot.append(openBtn, exportBtn);
     pg.append(foot);
     return pg;
   }

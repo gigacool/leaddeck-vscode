@@ -681,8 +681,12 @@ function reportEl(r: ReportVm): HTMLElement {
 
   const openBtn = el("button", "btn", `⧉ open ${r.reportPath}`);
   openBtn.onclick = () => post({ type: "openReport" });
-  const foot = el("div", "rp-note");
-  foot.append(openBtn);
+  // FR-22 — the raw data, for retrospection he runs himself. Not a chart: a
+  // chart is an opinion, and this is the feature that refuses to be v1's panel.
+  const exportBtn = el("button", "btn", "⤓ export data");
+  exportBtn.onclick = () => post({ type: "export" });
+  const foot = el("div", "rp-note foot-actions");
+  foot.append(openBtn, exportBtn);
   pg.append(foot);
 
   return pg;

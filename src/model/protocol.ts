@@ -174,20 +174,14 @@ export type WebviewMessage =
   | { type: "openDrain" }
   | { type: "closeDrain" }
   /**
-   * The drain's resolutions. `project` promotes the capture into a new Project
-   * — organizing IS deciding what a thing is, and "it's a new thing" is one of
-   * the answers. It lives here rather than on its own surface, because the
-   * fourth mode is how v1 became five panels.
-   */
-  /**
-   * FR-8's four destinations. `note` needs a target, so it is asked for rather
-   * than acted on: the webview cannot pick, so the host opens a QuickPick over
+   * FR-8's destinations. `note` needs a target, so it is asked for rather than
+   * acted on: the webview cannot pick, so the host opens a QuickPick over
    * `derive/collide` — the SAME engine capture uses, because it is the same
    * question ("what does this touch?") at a later moment.
    *
-   * `to: "project"` USED to mean "create a new project" — a destination FR-8
-   * never had. `＋ project` is how a project is made; this is how a capture
-   * lands on one that already exists.
+   * There is deliberately no "create a new project" here — `＋ project` is how a
+   * project is made; the drain lands a capture on things that already exist or
+   * bins it.
    */
   | { type: "resolveCapture"; id: CaptureId; to: "task" | "note" | "bin"; reason?: string }
   | { type: "setStatus"; id: TaskId; status: "todo" | "doing" | "done" }
@@ -195,6 +189,13 @@ export type WebviewMessage =
   | { type: "uncommit"; id: TaskId }
   | { type: "openReport" }
   | { type: "pull"; id: TaskId }
+  /**
+   * FR-22 — export the raw data, then get out of the way. The app owes data,
+   * not opinions: this writes the four entity files as one JSON bundle to a
+   * path he picks, for retrospection he runs himself, outside the app. It is
+   * NOT an analytics view — that is precisely what v1 was and this replaces.
+   */
+  | { type: "export" }
   /* ---- the sheet ---- */
   | { type: "openSheet"; kind: "task" | "project"; id: TaskId | ProjectId }
   | { type: "closeSheet" }

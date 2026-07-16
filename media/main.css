@@ -679,4 +679,6 @@ body {
   line-height: 1.5;
 }
 
+.foot-actions { display: flex; gap: 8px; align-items: center; }
+
 .empty { padding: 10px 12px; font-family: var(--mono); font-size: 10px; color: var(--fg-tertiary); }

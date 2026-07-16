@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { exportBundle } from "../derive/export.ts";
 import type { ChordMap } from "../derive/sheet.ts";
 import { buildViewModel, type UiState } from "../derive/viewmodel.ts";
 import { toDay, toWeek } from "../model/dates.ts";
@@ -208,6 +209,10 @@ export class Workbench {
 
       case "pull":
         await this.#pull(m.id, now);
+        return;
+
+      case "export":
+        await this.#export(now);
         return;
 
       case "openSheet":
@@ -454,6 +459,29 @@ export class Workbench {
     const end = editor.selection.active;
     editor.selection = new vscode.Selection(end, end);
     await vscode.window.showTextDocument(editor.document, editor.viewColumn);
+  }
+
+  /**
+   * FR-22 — the app owes data, not opinions.
+   *
+   * The whole dataset, verbatim, as one JSON bundle he chooses the home of.
+   * No shaping, no summary, no chart — a summary is an opinion, and this is the
+   * feature that replaces v1's analytics panel by refusing to be one. What he
+   * does with it (a spreadsheet, a script, a diff against last month) is his,
+   * outside the app.
+   */
+  async #export(now: Date): Promise<void> {
+    const bundle = exportBundle(this.#store.data, toWeek(now));
+    const target = await vscode.window.showSaveDialog({
+      defaultUri: vscode.Uri.file(`${this.#reportDir}/leaddeck-export-${toWeek(now)}.json`),
+      filters: { JSON: ["json"] },
+      saveLabel: "Export",
+    });
+    // Cancelled — no dialog, no file. An export he backed out of is not a file
+    // written somewhere he did not choose.
+    if (!target) return;
+    await vscode.workspace.fs.writeFile(target, Buffer.from(JSON.stringify(bundle, null, 2), "utf8"));
+    await vscode.commands.executeCommand("revealFileInOS", target);
   }
 
   dispose(): void {
