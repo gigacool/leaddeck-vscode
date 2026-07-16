@@ -187,16 +187,21 @@ export function backlogVm(
     rule: ruleBar(shownProjects, totalProjects, "they have living work"),
     captureChord,
     sheet,
-    drain: drainOpen
-      ? {
-          captures: unsorted.map((c) => ({
-            id: c.id,
-            text: c.text,
-            ageDays: captureAge(c.capturedAt, now),
-          })),
-          resolved: data.captures.filter((c) => c.state === "resolved").length,
-        }
-      : null,
+    // An OPEN-but-empty drain is never rendered — it would dim the shelf behind
+    // an empty list, which reads as a grey dead screen. The host also flips
+    // drainOpen off after the last resolution; this is the belt to that braces,
+    // so the empty drain cannot appear even if some path forgets to close it.
+    drain:
+      drainOpen && unsorted.length > 0
+        ? {
+            captures: unsorted.map((c) => ({
+              id: c.id,
+              text: c.text,
+              ageDays: captureAge(c.capturedAt, now),
+            })),
+            resolved: data.captures.filter((c) => c.state === "resolved").length,
+          }
+        : null,
   };
 }
 

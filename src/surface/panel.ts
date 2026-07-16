@@ -197,6 +197,13 @@ export class Workbench {
 
       case "resolveCapture":
         await this.#resolveCapture(m, now);
+        // The drain closes itself once nothing is left to sort. Without this it
+        // stayed open over an EMPTY list with the shelf dimmed behind it — which
+        // reads as a grey dead screen, not "you're done". Leaving some is fine
+        // (the drain stays for that); leaving NONE means there is no drain.
+        if (!this.#store.data.captures.some((c) => c.state === "unsorted")) {
+          this.#ui = { ...this.#ui, drainOpen: false };
+        }
         this.render();
         return;
 

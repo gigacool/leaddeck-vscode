@@ -316,7 +316,10 @@ body {
   transition: grid-template-rows .12s ease;
   background: color-mix(in srgb, var(--chrome) 60%, var(--bg));
 }
-.strip-tasks > * { overflow: hidden; visibility: hidden; }
+/* min-height:0 is load-bearing: a grid row of `0fr` still grows to fit a child
+   with intrinsic height unless the child is allowed to shrink to nothing. Its
+   absence is exactly why the list showed at rest instead of collapsed. */
+.strip-tasks > * { overflow: hidden; min-height: 0; visibility: hidden; }
 .strip-wrap:hover .strip-tasks { grid-template-rows: 1fr; }
 .strip-wrap:hover .strip-tasks > * { visibility: visible; }
 

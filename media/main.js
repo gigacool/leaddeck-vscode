@@ -693,7 +693,9 @@
     if (e.data.type === "render") render(e.data.vm);
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") post({ type: "closeDrain" });
+    if (e.key !== "Escape") return;
+    if (app.querySelector(".ed")) post({ type: "closeSheet" });
+    else if (app.querySelector(".drain")) post({ type: "closeDrain" });
   });
   post({ type: "ready" });
 })();

@@ -55,6 +55,23 @@ test("the drain is a SUB-STATE of backlog, not a mode", () => {
   assert.ok(backlogVm(d, NOW, WEEK, true).drain);
 });
 
+test("an OPEN drain with nothing left to sort renders as null, not an empty grey screen", () => {
+  // The last-capture bug: resolving the final capture left the drain open over
+  // an empty list with the shelf dimmed behind it — a grey dead screen. Open
+  // AND empty must never render the drain.
+  const allResolved = dataset({ captures: [aCapture({ state: "resolved" })] });
+  assert.equal(backlogVm(allResolved, NOW, WEEK, true).drain, null);
+
+  // Belt-and-braces with the host closing drainOpen: even asked to open, no
+  // unsorted capture ⇒ no drain.
+  const none = dataset({ captures: [] });
+  assert.equal(backlogVm(none, NOW, WEEK, true).drain, null);
+
+  // But one unsorted capture and the drain is there.
+  const one = dataset({ captures: [aCapture({ state: "unsorted" })] });
+  assert.ok(backlogVm(one, NOW, WEEK, true).drain);
+});
+
 test("the drain shows ALL captures at once — no queue, no countdown", () => {
   const captures = Array.from({ length: 11 }, (_, i) =>
     aCapture({ id: `cp_0000000${i}` as never }),

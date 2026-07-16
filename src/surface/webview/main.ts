@@ -990,7 +990,13 @@ window.addEventListener("message", (e: MessageEvent<HostMessage>) => {
 });
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") post({ type: "closeDrain" });
+  if (e.key !== "Escape") return;
+  // Esc closes whatever is open, sheet before drain. The webview holds no state
+  // (AD-11), so the DOM — which is the last VM made visible — is the source of
+  // truth: a `.ed` present means a sheet is open. Without the sheet branch, Esc
+  // only ever closed the drain and the editor could not be dismissed at all.
+  if (app.querySelector(".ed")) post({ type: "closeSheet" });
+  else if (app.querySelector(".drain")) post({ type: "closeDrain" });
 });
 
 post({ type: "ready" });
