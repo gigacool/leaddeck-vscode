@@ -209,7 +209,17 @@ export type WebviewMessage =
   | { type: "commit"; id: TaskId }
   | { type: "uncommit"; id: TaskId }
   | { type: "openReport" }
-  | { type: "pull"; id: TaskId }
+  /**
+   * Pre-fill the week's report file from the material on screen, grouped by
+   * project. Replaces the old per-line `pull`: retyping titles one by one was
+   * friction with no payoff (his words at the first real run). The useful
+   * friction — writing the prose — stays; the app just does the copying.
+   *
+   * Explicit, never automatic, and it NEVER overwrites: if the file already has
+   * content, it is opened as-is. AD-9 still holds — generated from memory,
+   * written once, never read back.
+   */
+  | { type: "prefillReport" }
   /**
    * FR-20 — step the report one week older (`-1`) or newer (`+1`). The host
    * clamps to 0..5; the webview never computes the bound, it only asks. There

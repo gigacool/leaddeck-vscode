@@ -1,7 +1,8 @@
 import * as vscode from "vscode";
 import { exportBundle } from "../derive/export.ts";
 import type { ChordMap } from "../derive/sheet.ts";
-import { buildViewModel, STEPPER_WEEKS, type UiState } from "../derive/viewmodel.ts";
+import { reportSkeleton } from "../derive/skeleton.ts";
+import { buildViewModel, reportVm, STEPPER_WEEKS, type UiState } from "../derive/viewmodel.ts";
 import { addWeeks, toDay, toWeek } from "../model/dates.ts";
 import type { HostMessage, Mode, WebviewMessage } from "../model/protocol.ts";
 import type { Store } from "../store/store.ts";
@@ -214,8 +215,8 @@ export class Workbench {
         await this.#openReport(now);
         return;
 
-      case "pull":
-        await this.#pull(m.id, now);
+      case "prefillReport":
+        await this.#prefillReport(now);
         return;
 
       case "export":
@@ -460,23 +461,33 @@ export class Workbench {
   }
 
   /**
-   * THE STANDING LAW — pull inserts a stub, never a sentence.
+   * Pre-fill the report from the week's material, grouped by project.
    *
-   * A title and a cursor. Nothing more. ~80% of the report is prose the app
-   * cannot produce, and the section works precisely to the extent it doesn't
-   * help. Test any change here: does it reduce what he types? If yes, refuse it
-   * — even though reducing typing always looks like an improvement.
+   * Replaces the old per-line `pull`. Retyping titles was friction with no
+   * payoff (his call at the first real run); the useful friction is the prose,
+   * which stays — every line ends in ` — ` where he writes.
+   *
+   * It NEVER overwrites. If the file already exists, it is opened as-is: his
+   * words are never at risk from a button. The pre-fill only ever writes a file
+   * that was not there. AD-9 holds — the skeleton is derived from memory and
+   * written once; the file is never read back.
    */
-  async #pull(id: string, now: Date): Promise<void> {
-    const task = this.#store.data.tasks.find((t) => t.id === id);
-    if (!task) return;
+  async #prefillReport(now: Date): Promise<void> {
+    const uri = vscode.Uri.file(this.#reportPath(now));
+    const week = addWeeks(toWeek(now), -this.#ui.weekOffset);
 
-    const editor = await this.#openReport(now);
-    // Insert at the cursor. Never read, parse, or seek within the file (AD-9).
-    await editor.edit((b) => b.insert(editor.selection.active, `- ${task.title} — `));
-    const end = editor.selection.active;
-    editor.selection = new vscode.Selection(end, end);
-    await vscode.window.showTextDocument(editor.document, editor.viewColumn);
+    const exists = await vscode.workspace.fs.stat(uri).then(
+      () => true,
+      () => false,
+    );
+
+    if (!exists) {
+      const r = reportVm(this.#store.data, toDay(now), week, this.#ui.weekOffset, uri.fsPath);
+      await vscode.workspace.fs.writeFile(uri, Buffer.from(reportSkeleton(r, week), "utf8"));
+    }
+
+    const doc = await vscode.workspace.openTextDocument(uri);
+    await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
   }
 
   /**

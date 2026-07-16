@@ -523,19 +523,21 @@
     );
     week.append(three);
     const note = el("div", "rp-note");
-    note.textContent = "\u27E8 pull \u27E9 inserts a stub \u2014 a title and a cursor. The sentence is yours; the app cannot write it.";
+    note.textContent = "\u2193 pre-fill lays out the finished work by project \u2014 you write the prose after each \u2014 .";
     week.append(note);
     pg.append(week);
     const burn = el("div", "pg-sec");
     burn.append(section("\u2462 Burndown", "committed that week, still open"));
     burn.append(burndownEl(r.burndown));
     pg.append(burn);
+    const prefillBtn = el("button", "btn pri", "\u2193 pre-fill report");
+    prefillBtn.onclick = () => post({ type: "prefillReport" });
     const openBtn = el("button", "btn", `\u29C9 open ${r.reportPath}`);
     openBtn.onclick = () => post({ type: "openReport" });
     const exportBtn = el("button", "btn", "\u2913 export data");
     exportBtn.onclick = () => post({ type: "export" });
     const foot = el("div", "rp-note foot-actions");
-    foot.append(openBtn, exportBtn);
+    foot.append(prefillBtn, openBtn, exportBtn);
     pg.append(foot);
     return pg;
   }
@@ -548,9 +550,6 @@
     for (const r of rows) {
       const row = el("div", "ri");
       row.append(el("span", "rt", r.title), el("span", "rp", r.meta));
-      const add = el("button", "add", "\u27E8 pull \u27E9");
-      add.onclick = () => post({ type: "pull", id: r.id });
-      row.append(add);
       list.append(row);
     }
     if (rows.length === 0) list.append(el("div", "empty", "\u2014"));

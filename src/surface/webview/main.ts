@@ -729,7 +729,7 @@ function reportEl(r: ReportVm): HTMLElement {
 
   const note = el("div", "rp-note");
   note.textContent =
-    "⟨ pull ⟩ inserts a stub — a title and a cursor. The sentence is yours; the app cannot write it.";
+    "↓ pre-fill lays out the finished work by project — you write the prose after each — .";
   week.append(note);
   pg.append(week);
 
@@ -738,6 +738,10 @@ function reportEl(r: ReportVm): HTMLElement {
   burn.append(burndownEl(r.burndown));
   pg.append(burn);
 
+  // ↓ pre-fill writes the report file laid out by project, then opens it. It
+  // never overwrites — an existing file opens as-is (the host guards that).
+  const prefillBtn = el("button", "btn pri", "↓ pre-fill report");
+  prefillBtn.onclick = () => post({ type: "prefillReport" });
   const openBtn = el("button", "btn", `⧉ open ${r.reportPath}`);
   openBtn.onclick = () => post({ type: "openReport" });
   // FR-22 — the raw data, for retrospection he runs himself. Not a chart: a
@@ -745,7 +749,7 @@ function reportEl(r: ReportVm): HTMLElement {
   const exportBtn = el("button", "btn", "⤓ export data");
   exportBtn.onclick = () => post({ type: "export" });
   const foot = el("div", "rp-note foot-actions");
-  foot.append(openBtn, exportBtn);
+  foot.append(prefillBtn, openBtn, exportBtn);
   pg.append(foot);
 
   return pg;
@@ -764,10 +768,9 @@ function column(
   const list = el("div", "rp3-l");
   for (const r of rows) {
     const row = el("div", "ri");
+    // No per-line action anymore — the whole report is pre-filled at once,
+    // grouped by project. A row here is a reference, read-only.
     row.append(el("span", "rt", r.title), el("span", "rp", r.meta));
-    const add = el("button", "add", "⟨ pull ⟩");
-    add.onclick = () => post({ type: "pull", id: r.id as never });
-    row.append(add);
     list.append(row);
   }
   if (rows.length === 0) list.append(el("div", "empty", "—"));

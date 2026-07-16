@@ -660,9 +660,6 @@ body {
 .ri:hover { background: var(--hover); }
 .ri .rt { color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
 .ri .rp { font-family: var(--mono); font-size: 8.5px; color: var(--fg-tertiary); white-space: nowrap; }
-/* An OFFER, not a chore: a dashed rail. */
-.ri .add { font-family: var(--mono); font-size: 8.5px; color: var(--fg-tertiary); border: 1px dashed var(--border-strong); padding: 0 3px; cursor: pointer; background: none; }
-.ri .add:hover { color: var(--week); border-color: var(--week); }
 
 /* FR-20 — the six-week stepper. Navigation, never a range control. */
 .step { display: flex; align-items: center; gap: 8px; padding: 5px 10px; background: var(--chrome); border-bottom: 1px solid var(--border); }
@@ -692,10 +689,9 @@ body {
 .burn-swatch.ideal { border-top-style: dashed; border-top-color: var(--fg-tertiary); }
 
 /*
- * The law, made visible: pull inserts a STUB, never a sentence.
- * ~80% of the report is prose the app cannot produce. This section works
- * precisely to the extent it doesn't help. Test any change here: does it reduce
- * what he types? If yes, refuse it.
+ * The pre-fill note. The app lays out the finished work grouped by project;
+ * the prose after each ` — ` is his. The copying is automated, the thinking is
+ * not — that is the line the report holds.
  */
 .rp-note {
   padding: 6px 10px;
