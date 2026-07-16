@@ -43,7 +43,7 @@
   function stripEl(s) {
     const row = el("div", "strip");
     row.onclick = () => post({ type: "openSheet", kind: "project", id: s.id });
-    row.append(el("span", "grip", "\u28FF"), el("span", "p-name", s.title));
+    row.append(el("span", "grip", "\xB7"), el("span", "p-name", s.title));
     const pips = el("div", "pips");
     for (const p of s.pips) pips.append(pipEl(p));
     row.append(pips);
@@ -117,13 +117,14 @@
       row.append(el("span", "when", c.ageDays === 0 ? "today" : `${c.ageDays}d`));
       const acts = el("div", "acts");
       const task = el("button", "btn pri", "\u2192 task");
+      task.title = "new work, no home yet \u2014 it lands in the Inbox";
       task.onclick = () => post({ type: "resolveCapture", id: c.id, to: "task" });
-      const project = el("button", "btn", "\u2192 project");
-      project.title = "it is not a task \u2014 it is a whole thing";
-      project.onclick = () => post({ type: "resolveCapture", id: c.id, to: "project" });
+      const note = el("button", "btn", "\u2192 note on\u2026");
+      note.title = "it is not new work \u2014 it is news about work you already have";
+      note.onclick = () => post({ type: "resolveCapture", id: c.id, to: "note" });
       const bin = el("button", "btn death", "let it die");
       bin.onclick = () => post({ type: "resolveCapture", id: c.id, to: "bin", reason: "outdated" });
-      acts.append(task, project, bin);
+      acts.append(task, note, bin);
       row.append(acts);
       list.append(row);
     }

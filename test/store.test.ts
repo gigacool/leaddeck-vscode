@@ -132,6 +132,51 @@ test("AD-13 — creators are written before consumers", async (t) => {
   assert.deepEqual(order, ["tasks", "captures"]);
 });
 
+/*
+ * FR-8's note destination has the same AD-13 shape as resolve-to-task, and it
+ * gets it for free: `captures` is last in WRITE_ORDER, so the note is written
+ * into tasks.json BEFORE the capture is marked resolved.
+ *
+ * A crash between the two leaves the note written and the capture still
+ * unsorted — he re-resolves and gets a duplicate note, which is visible and
+ * fixable. The other order loses the text entirely, silently.
+ */
+test("AD-13 — a capture resolved to a NOTE writes the note before consuming it", async (t) => {
+  const root = await tmpRoot();
+  t.after(() => rm(root, { recursive: true, force: true }));
+
+  const order: string[] = [];
+  const store = await Store.open({
+    root,
+    write: async (r, file, rows) => {
+      order.push(file);
+      const { writeEntityFile } = await import("../src/store/files.ts");
+      return writeEntityFile(r, file, rows);
+    },
+  });
+
+  const task = aTask();
+  const capture = aCapture();
+  await store.mutate((d) => {
+    d.tasks.push(task);
+    d.captures.push(capture);
+    return { touched: ["tasks", "captures"] };
+  });
+  order.length = 0;
+
+  await store.mutate((d) => {
+    const c = d.captures.find((x) => x.id === capture.id)!;
+    const t2 = d.tasks.find((x) => x.id === task.id)!;
+    t2.logMessages.unshift({ eventDate: "2026-07-16", message: c.text });
+    c.state = "resolved";
+    return { touched: ["captures", "tasks"] }; // named consumer-first on purpose
+  });
+
+  assert.deepEqual(order, ["tasks", "captures"]);
+  const tasks = (await readJson(root, "tasks")) as Task[];
+  assert.equal(tasks[0]!.logMessages[0]!.message, capture.text);
+});
+
 test("AD-13 — a crash between the two writes leaves an ORPHAN, never a void", async (t) => {
   const root = await tmpRoot();
   t.after(() => rm(root, { recursive: true, force: true }));

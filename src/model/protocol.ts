@@ -179,7 +179,17 @@ export type WebviewMessage =
    * the answers. It lives here rather than on its own surface, because the
    * fourth mode is how v1 became five panels.
    */
-  | { type: "resolveCapture"; id: CaptureId; to: "task" | "project" | "bin"; reason?: string }
+  /**
+   * FR-8's four destinations. `note` needs a target, so it is asked for rather
+   * than acted on: the webview cannot pick, so the host opens a QuickPick over
+   * `derive/collide` — the SAME engine capture uses, because it is the same
+   * question ("what does this touch?") at a later moment.
+   *
+   * `to: "project"` USED to mean "create a new project" — a destination FR-8
+   * never had. `＋ project` is how a project is made; this is how a capture
+   * lands on one that already exists.
+   */
+  | { type: "resolveCapture"; id: CaptureId; to: "task" | "note" | "bin"; reason?: string }
   | { type: "setStatus"; id: TaskId; status: "todo" | "doing" | "done" }
   | { type: "commit"; id: TaskId }
   | { type: "uncommit"; id: TaskId }

@@ -90,7 +90,11 @@ function pipEl(p: { id: string; title: string; state: string; wk: boolean }): HT
 function stripEl(s: StripVm): HTMLElement {
   const row = el("div", "strip");
   row.onclick = () => post({ type: "openSheet", kind: "project", id: s.id });
-  row.append(el("span", "grip", "⣿"), el("span", "p-name", s.title));
+  // NOT a drag grip. `⣿` advertised a reorder that cannot exist: THE BAND IS
+  // THE SORT, and a manual order would be priority coming back wearing a
+  // costume — the concept the design removed first. A glyph that offers a
+  // gesture the tool refuses is the same lie as a button that does nothing.
+  row.append(el("span", "grip", "·"), el("span", "p-name", s.title));
 
   const pips = el("div", "pips");
   for (const p of s.pips) pips.append(pipEl(p));
@@ -193,13 +197,17 @@ function drainEl(d: NonNullable<BacklogVm["drain"]>): HTMLElement {
     // All resolutions are peers. Create is not privileged, and neither is death.
     const acts = el("div", "acts");
     const task = el("button", "btn pri", "→ task");
+    task.title = "new work, no home yet — it lands in the Inbox";
     task.onclick = () => post({ type: "resolveCapture", id: c.id, to: "task" });
-    const project = el("button", "btn", "→ project");
-    project.title = "it is not a task — it is a whole thing";
-    project.onclick = () => post({ type: "resolveCapture", id: c.id, to: "project" });
+    // FR-8's two note destinations behind one button: the picker decides whether
+    // the target is a task or a project, because he is looking for a THING, not
+    // choosing a type first.
+    const note = el("button", "btn", "→ note on…");
+    note.title = "it is not new work — it is news about work you already have";
+    note.onclick = () => post({ type: "resolveCapture", id: c.id, to: "note" });
     const bin = el("button", "btn death", "let it die");
     bin.onclick = () => post({ type: "resolveCapture", id: c.id, to: "bin", reason: "outdated" });
-    acts.append(task, project, bin);
+    acts.append(task, note, bin);
     row.append(acts);
     list.append(row);
   }

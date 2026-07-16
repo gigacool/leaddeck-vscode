@@ -320,8 +320,22 @@ export class Workbench {
     m: Extract<WebviewMessage, { type: "resolveCapture" }>,
     now: Date,
   ): Promise<void> {
-    const { newProjectId, newTaskId } = await import("../model/ids.ts");
+    const { newTaskId } = await import("../model/ids.ts");
     const { INBOX_PROJECT_ID } = await import("../model/types.ts");
+
+    /*
+     * FR-8's note destinations. The picker runs BEFORE the mutation, because it
+     * can be cancelled — and a capture consumed by a resolution he backed out
+     * of would be work destroyed by an Esc.
+     */
+    let target: { kind: "task" | "project"; id: string } | null = null;
+    if (m.to === "note") {
+      const capture = this.#store.data.captures.find((x) => x.id === m.id);
+      if (!capture) return;
+      const { pickNoteTarget } = await import("./pick.ts");
+      target = await pickNoteTarget(this.#store.data, capture.text);
+      if (!target) return; // Esc — the capture stays unsorted. Leaving it is fine.
+    }
 
     await this.#store.mutate((d) => {
       const c = d.captures.find((x) => x.id === m.id);
@@ -332,21 +346,22 @@ export class Workbench {
         return { touched: ["captures"] };
       }
 
-      if (m.to === "project") {
-        // A project has ONE deadline and no status. Bare is fine — a bare thing
-        // is a finished thing, and an empty field is a chore.
-        d.projects.push({
-          id: newProjectId(),
-          title: c.text,
-          description: "",
-          deadline: null,
-          stakeholders: [],
-          tags: [],
-          logMessages: [],
-        });
+      if (m.to === "note" && target) {
+        // The capture's text BECOMES the log message — it is already the note.
+        // eventDate is auto-stamped and editable on the sheet: he logs Tuesday's
+        // event on Friday, and a stamp he cannot correct is a lie in the record.
+        const entry = { eventDate: toDay(now), message: c.text };
+        if (target.kind === "task") {
+          const t = d.tasks.find((x) => x.id === target!.id);
+          if (!t) return { touched: [] };
+          t.logMessages.unshift(entry);
+          c.state = "resolved";
+          return { touched: ["tasks", "captures"] };
+        }
+        const p = d.projects.find((x) => x.id === target!.id);
+        if (!p) return { touched: [] };
+        p.logMessages.unshift(entry);
         c.state = "resolved";
-        // resolvedTo is a TaskId. A project resolution has no task, so the
-        // self-heal cannot key on it — hence creator-before-consumer below.
         return { touched: ["projects", "captures"] };
       }
 
