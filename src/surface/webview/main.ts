@@ -99,6 +99,12 @@ function pipEl(p: { id: string; title: string; state: string; wk: boolean }): HT
 }
 
 function stripEl(s: StripVm): HTMLElement {
+  // The wrapper holds the dense bar AND the readable list that unfolds under it
+  // on hover (FR-13 + readability). The bar stays the at-a-glance view; the list
+  // is where a pip becomes a title he can act on — so nothing changes until he
+  // hovers, and density is untouched.
+  const wrap = el("div", "strip-wrap");
+
   const row = el("div", "strip");
   row.onclick = () => post({ type: "openSheet", kind: "project", id: s.id });
   // NOT a drag grip. `⣿` advertised a reorder that cannot exist: THE BAND IS
@@ -135,7 +141,67 @@ function stripEl(s: StripVm): HTMLElement {
   }
   right.append(who);
   row.append(right);
-  return row;
+
+  wrap.append(row, stripTasksEl(s));
+  return wrap;
+}
+
+/** Glyph for a pip's state — the same fact the pip's colour carries, in text. */
+function stateGlyph(state: string): string {
+  switch (state) {
+    case "done":
+      return "✓";
+    case "doing":
+      return "▸";
+    case "block":
+      return "⊘";
+    case "stale":
+      return "◦";
+    default:
+      return "•"; // todo / raw
+  }
+}
+
+/**
+ * The readable list under a strip — one row per task, title you can read, and
+ * the ONE action the shelf owes: commit to the shown week (FR-13). `‹ this week`
+ * commits; a task already committed shows `✓ this week`, click to release.
+ *
+ * Deliberately ONE button per row. The shelf is where v1 died of controls, so
+ * this list earns its place by staying a list — not a second sheet. Everything
+ * else (status, deadline, notes) is the sheet's job, a click away on the title.
+ */
+function stripTasksEl(s: StripVm): HTMLElement {
+  const list = el("div", "strip-tasks");
+  for (const p of s.pips) {
+    const item = el("div", `st-row ${p.state}`);
+
+    const title = el("button", "st-title");
+    title.append(el("span", "st-g", stateGlyph(p.state)), document.createTextNode(p.title));
+    title.onclick = () => post({ type: "openSheet", kind: "task", id: p.id as never });
+
+    const done = p.state === "done";
+    // A finished task is not committed-to-a-week material — the week is about
+    // what's still ahead, so done rows show no commit action, only the title.
+    const commit = el("button", `st-commit${p.wk ? " on" : ""}`);
+    if (done) {
+      commit.className = "st-commit ghost";
+      commit.textContent = "done";
+      commit.disabled = true;
+    } else if (p.wk) {
+      commit.textContent = "✓ this week";
+      commit.title = "committed — click to release";
+      commit.onclick = () => post({ type: "uncommit", id: p.id as never });
+    } else {
+      commit.textContent = "→ this week";
+      commit.title = "commit to the shown week";
+      commit.onclick = () => post({ type: "commit", id: p.id as never });
+    }
+
+    item.append(title, commit);
+    list.append(item);
+  }
+  return list;
 }
 
 function bandEl(b: BandVm, sheet: SheetVm | null): HTMLElement {
@@ -744,12 +810,16 @@ function reportEl(r: ReportVm): HTMLElement {
   prefillBtn.onclick = () => post({ type: "prefillReport" });
   const openBtn = el("button", "btn", `⧉ open ${r.reportPath}`);
   openBtn.onclick = () => post({ type: "openReport" });
+  // FR-17 — the only sharing that exists: the report text, to the clipboard,
+  // for an email he sends himself.
+  const copyBtn = el("button", "btn", "⧉ copy");
+  copyBtn.onclick = () => post({ type: "copyReport" });
   // FR-22 — the raw data, for retrospection he runs himself. Not a chart: a
   // chart is an opinion, and this is the feature that refuses to be v1's panel.
   const exportBtn = el("button", "btn", "⤓ export data");
   exportBtn.onclick = () => post({ type: "export" });
   const foot = el("div", "rp-note foot-actions");
-  foot.append(prefillBtn, openBtn, exportBtn);
+  foot.append(prefillBtn, openBtn, copyBtn, exportBtn);
   pg.append(foot);
 
   return pg;

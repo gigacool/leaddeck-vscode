@@ -210,6 +210,12 @@ export type WebviewMessage =
   | { type: "uncommit"; id: TaskId }
   | { type: "openReport" }
   /**
+   * FR-17 — `⧉ copy` puts the report text on the clipboard for an email. The
+   * ONLY sharing that exists. Reading the file to copy it is not AD-9 parsing —
+   * it derives no state from the text, it just hands the bytes to the clipboard.
+   */
+  | { type: "copyReport" }
+  /**
    * Pre-fill the week's report file from the material on screen, grouped by
    * project. Replaces the old per-line `pull`: retyping titles one by one was
    * friction with no payoff (his words at the first real run). The useful

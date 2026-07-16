@@ -301,6 +301,53 @@ body {
 .p-add:hover { color: var(--fg) !important; }
 .p-add:focus-visible { color: var(--fg); outline: 1px solid var(--accent-2); outline-offset: 1px; }
 
+/* ---- the readable task list, unfolded on hover (FR-13 + readability) ---- */
+.strip-wrap { border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, var(--bg)); }
+.strip-wrap:last-child { border-bottom: 0; }
+.strip-wrap .strip { border-bottom: 0; } /* the wrapper owns the divider now */
+
+/*
+ * Collapsed at rest — density is the feature, so nothing shows until he asks by
+ * hovering. Not display:none: a grid-rows transition keeps the unfold calm
+ * instead of a jump, and hidden rows stay out of the tab order via visibility.
+ */
+.strip-tasks {
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows .12s ease;
+  background: color-mix(in srgb, var(--chrome) 60%, var(--bg));
+}
+.strip-tasks > * { overflow: hidden; visibility: hidden; }
+.strip-wrap:hover .strip-tasks { grid-template-rows: 1fr; }
+.strip-wrap:hover .strip-tasks > * { visibility: visible; }
+
+.st-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 1.5px 10px 1.5px 34px; /* indent under the project name */
+  font-size: 11px;
+}
+.st-row:hover { background: var(--hover); }
+.st-title {
+  flex: 1; min-width: 0; text-align: left; background: 0; border: 0; cursor: pointer;
+  color: var(--fg); font: inherit;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: flex; align-items: center; gap: 6px;
+}
+.st-title:hover { color: var(--week); }
+.st-g { font-family: var(--mono); font-size: 10px; color: var(--fg-faint); }
+.st-row.done .st-title { color: var(--fg-faint); text-decoration: line-through; }
+.st-row.block .st-g { color: var(--danger); }
+.st-row.doing .st-g { color: var(--week); }
+
+/* One button per row: commit to the shown week. The shelf's only action. */
+.st-commit {
+  font-family: var(--mono); font-size: 8.5px; white-space: nowrap;
+  background: 0; border: 1px dashed var(--border-strong); color: var(--fg-tertiary);
+  padding: 0 5px; cursor: pointer;
+}
+.st-commit:hover:not(:disabled) { color: var(--week); border-color: var(--week); }
+.st-commit.on { border-style: solid; border-color: var(--week); color: var(--week); }
+.st-commit.ghost { border-color: transparent; color: var(--fg-faint); cursor: default; }
+
 .p-right { display: flex; align-items: center; gap: 8px; justify-content: flex-end; white-space: nowrap; }
 .frac { font-family: var(--mono); font-size: 9.5px; color: var(--fg-faint); min-width: 34px; text-align: right; }
 .sig { font-family: var(--mono); font-size: 9.5px; padding: 0 3px; border: 1px solid transparent; white-space: nowrap; }

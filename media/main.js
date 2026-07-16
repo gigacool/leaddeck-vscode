@@ -46,6 +46,7 @@
     return n;
   }
   function stripEl(s) {
+    const wrap = el("div", "strip-wrap");
     const row = el("div", "strip");
     row.onclick = () => post({ type: "openSheet", kind: "project", id: s.id });
     row.append(el("span", "grip", "\xB7"), el("span", "p-name", s.title));
@@ -71,7 +72,49 @@
     }
     right.append(who);
     row.append(right);
-    return row;
+    wrap.append(row, stripTasksEl(s));
+    return wrap;
+  }
+  function stateGlyph(state) {
+    switch (state) {
+      case "done":
+        return "\u2713";
+      case "doing":
+        return "\u25B8";
+      case "block":
+        return "\u2298";
+      case "stale":
+        return "\u25E6";
+      default:
+        return "\u2022";
+    }
+  }
+  function stripTasksEl(s) {
+    const list = el("div", "strip-tasks");
+    for (const p of s.pips) {
+      const item = el("div", `st-row ${p.state}`);
+      const title = el("button", "st-title");
+      title.append(el("span", "st-g", stateGlyph(p.state)), document.createTextNode(p.title));
+      title.onclick = () => post({ type: "openSheet", kind: "task", id: p.id });
+      const done = p.state === "done";
+      const commit = el("button", `st-commit${p.wk ? " on" : ""}`);
+      if (done) {
+        commit.className = "st-commit ghost";
+        commit.textContent = "done";
+        commit.disabled = true;
+      } else if (p.wk) {
+        commit.textContent = "\u2713 this week";
+        commit.title = "committed \u2014 click to release";
+        commit.onclick = () => post({ type: "uncommit", id: p.id });
+      } else {
+        commit.textContent = "\u2192 this week";
+        commit.title = "commit to the shown week";
+        commit.onclick = () => post({ type: "commit", id: p.id });
+      }
+      item.append(title, commit);
+      list.append(item);
+    }
+    return list;
   }
   function bandEl(b, sheet) {
     const band = el("div", `band ${b.kind}`);
@@ -534,10 +577,12 @@
     prefillBtn.onclick = () => post({ type: "prefillReport" });
     const openBtn = el("button", "btn", `\u29C9 open ${r.reportPath}`);
     openBtn.onclick = () => post({ type: "openReport" });
+    const copyBtn = el("button", "btn", "\u29C9 copy");
+    copyBtn.onclick = () => post({ type: "copyReport" });
     const exportBtn = el("button", "btn", "\u2913 export data");
     exportBtn.onclick = () => post({ type: "export" });
     const foot = el("div", "rp-note foot-actions");
-    foot.append(prefillBtn, openBtn, exportBtn);
+    foot.append(prefillBtn, openBtn, copyBtn, exportBtn);
     pg.append(foot);
     return pg;
   }

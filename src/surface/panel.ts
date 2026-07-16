@@ -219,6 +219,10 @@ export class Workbench {
         await this.#prefillReport(now);
         return;
 
+      case "copyReport":
+        await this.#copyReport(now);
+        return;
+
       case "export":
         await this.#export(now);
         return;
@@ -488,6 +492,28 @@ export class Workbench {
 
     const doc = await vscode.workspace.openTextDocument(uri);
     await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+  }
+
+  /**
+   * FR-17 — `⧉ copy` puts the report on the clipboard for an email. The only
+   * sharing that exists. Reading the file here is not AD-9 parsing: no state is
+   * derived from the text, the bytes are handed straight to the clipboard. If
+   * the file is not there yet, there is nothing to copy — say so, don't invent.
+   */
+  async #copyReport(now: Date): Promise<void> {
+    const uri = vscode.Uri.file(this.#reportPath(now));
+    const bytes = await vscode.workspace.fs.readFile(uri).then(
+      (b) => b,
+      () => null,
+    );
+    if (bytes === null) {
+      void vscode.window.showInformationMessage(
+        "No report yet — pre-fill or open it first, then copy.",
+      );
+      return;
+    }
+    await vscode.env.clipboard.writeText(Buffer.from(bytes).toString("utf8"));
+    void vscode.window.showInformationMessage("Report copied to clipboard.");
   }
 
   /**
