@@ -664,6 +664,23 @@ body {
 .ri .add { font-family: var(--mono); font-size: 8.5px; color: var(--fg-tertiary); border: 1px dashed var(--border-strong); padding: 0 3px; cursor: pointer; background: none; }
 .ri .add:hover { color: var(--week); border-color: var(--week); }
 
+/* FR-21 — the burndown, and its fiction flagged. */
+.burn { padding: 8px 10px 6px; }
+.burn-svg { display: block; max-width: 360px; }
+.burn-axis { stroke: var(--border-strong); stroke-width: 1; }
+.burn-grid { stroke: var(--border); stroke-width: 1; stroke-dasharray: 1 3; }
+.burn-real { fill: none; stroke: var(--accent-2); stroke-width: 1.5; }
+.burn-dot { fill: var(--accent-2); }
+/* Dashed, so the eye reads it as provisional before it reads the caption. */
+.burn-ideal { stroke: var(--fg-tertiary); stroke-width: 1; stroke-dasharray: 4 3; }
+.burn-ylab, .burn-xlab { fill: var(--fg-tertiary); font-family: var(--mono); font-size: 7px; }
+.burn-xlab { text-anchor: middle; }
+.burn-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; font-family: var(--mono); font-size: 8.5px; color: var(--fg-tertiary); }
+.burn-legend > span { display: inline-flex; align-items: center; gap: 5px; }
+.burn-swatch { width: 12px; height: 0; border-top-width: 2px; border-top-style: solid; }
+.burn-swatch.real { border-top-color: var(--accent-2); }
+.burn-swatch.ideal { border-top-style: dashed; border-top-color: var(--fg-tertiary); }
+
 /*
  * The law, made visible: pull inserts a STUB, never a sentence.
  * ~80% of the report is prose the app cannot produce. This section works

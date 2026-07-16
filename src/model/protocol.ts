@@ -1,4 +1,5 @@
 import type { BandKind } from "../derive/bands.ts";
+import type { Burndown } from "../derive/burndown.ts";
 import type { UrgencySignal } from "../derive/urgency.ts";
 import type { CaptureId, ProjectId, StakeholderId, TaskId } from "./types.ts";
 
@@ -150,6 +151,8 @@ export interface ReportVm {
   happened: { id: TaskId; title: string; project: string }[];
   stuck: { id: TaskId; title: string; project: string; why: string }[];
   next: { id: TaskId; title: string; project: string }[];
+  /** FR-21 — the week's burndown, with its ideal line flagged fiction. */
+  burndown: Burndown;
   /** The path of the real file he writes in. The app never parses it back. */
   reportPath: string;
 }

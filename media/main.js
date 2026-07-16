@@ -10,6 +10,11 @@
     if (text !== void 0) n.textContent = text;
     return n;
   }
+  function svg(tag, attrs) {
+    const n = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, String(v));
+    return n;
+  }
   function header(vm) {
     const head = el("div", "wb-head");
     const seg = el("div", "seg");
@@ -502,6 +507,10 @@
     note.textContent = "\u27E8 pull \u27E9 inserts a stub \u2014 a title and a cursor. The sentence is yours; the app cannot write it.";
     week.append(note);
     pg.append(week);
+    const burn = el("div", "pg-sec");
+    burn.append(section("\u2462 Burndown", "committed this week, still open"));
+    burn.append(burndownEl(r.burndown));
+    pg.append(burn);
     const openBtn = el("button", "btn", `\u29C9 open ${r.reportPath}`);
     openBtn.onclick = () => post({ type: "openReport" });
     const exportBtn = el("button", "btn", "\u2913 export data");
@@ -528,6 +537,60 @@
     if (rows.length === 0) list.append(el("div", "empty", "\u2014"));
     c.append(list);
     return c;
+  }
+  function burndownEl(b) {
+    const box = el("div", "burn");
+    if (b.empty) {
+      box.append(el("div", "empty", "nothing committed to this week \u2014 nothing to burn down"));
+      return box;
+    }
+    const W = 320;
+    const H = 96;
+    const padL = 18;
+    const padR = 8;
+    const padT = 8;
+    const padB = 18;
+    const days = b.remaining;
+    const top = Math.max(b.ideal, 1);
+    const x = (i) => padL + i * (W - padL - padR) / (days.length - 1);
+    const y = (v) => padT + (1 - v / top) * (H - padT - padB);
+    const chart = svg("svg", { class: "burn-svg", viewBox: `0 0 ${W} ${H}`, width: "100%" });
+    chart.append(
+      svg("line", { class: "burn-axis", x1: padL, y1: y(0), x2: W - padR, y2: y(0) }),
+      svg("line", { class: "burn-grid", x1: padL, y1: y(top), x2: W - padR, y2: y(top) })
+    );
+    chart.append(
+      svg("line", {
+        class: "burn-ideal",
+        x1: padL,
+        y1: y(b.ideal),
+        x2: W - padR,
+        y2: y(b.ideal)
+      })
+    );
+    const pts = days.map((d, i) => `${x(i)},${y(d.count)}`).join(" ");
+    chart.append(svg("polyline", { class: "burn-real", points: pts }));
+    days.forEach((d, i) => {
+      chart.append(svg("circle", { class: "burn-dot", cx: x(i), cy: y(d.count), r: 2.5 }));
+    });
+    const yLabel = svg("text", { class: "burn-ylab", x: 2, y: y(top) + 3 });
+    yLabel.textContent = String(top);
+    chart.append(yLabel);
+    const initials = ["M", "T", "W", "T", "F", "S", "S"];
+    days.forEach((_, i) => {
+      const t = svg("text", { class: "burn-xlab", x: x(i), y: H - 6 });
+      t.textContent = initials[i] ?? "";
+      chart.append(t);
+    });
+    box.append(chart);
+    const legend = el("div", "burn-legend");
+    const real = el("span", "burn-leg-real");
+    real.append(el("span", "burn-swatch real"), el("span", void 0, "remaining (real)"));
+    const ideal = el("span", "burn-leg-ideal");
+    ideal.append(el("span", "burn-swatch ideal"), el("span", void 0, b.idealLabel));
+    legend.append(real, ideal);
+    box.append(legend);
+    return box;
   }
   function withFocus(paint) {
     const active = document.activeElement;

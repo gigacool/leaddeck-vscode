@@ -47,6 +47,29 @@ export function daysBetween(from: Day, to: Day): number {
   return Math.round((b.getTime() - a.getTime()) / 86400000);
 }
 
+/**
+ * The seven days of an ISO week, Monday first. Used by the burndown (FR-21) to
+ * plot a point per day. Derived from the week's Thursday-anchored Monday, the
+ * same anchor `addWeeks` uses — one definition of "which Monday", not two.
+ */
+export function weekDays(week: Week): Day[] {
+  const [yStr, wStr] = week.split("-W");
+  const y = Number(yStr);
+  const w = Number(wStr);
+  const jan4 = new Date(y, 0, 4);
+  const jan4DayNum = (jan4.getDay() + 6) % 7;
+  const week1Monday = new Date(y, 0, 4 - jan4DayNum);
+  const monday = new Date(week1Monday);
+  monday.setDate(monday.getDate() + (w - 1) * 7);
+  const days: Day[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(d.getDate() + i);
+    days.push(toDay(d));
+  }
+  return days;
+}
+
 export function addWeeks(week: Week, delta: number): Week {
   const [yStr, wStr] = week.split("-W");
   const y = Number(yStr);

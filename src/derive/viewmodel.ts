@@ -1,4 +1,4 @@
-import { toWeek } from "../model/dates.ts";
+import { addWeeks, toWeek } from "../model/dates.ts";
 import type {
   BacklogVm,
   BandVm,
@@ -14,6 +14,7 @@ import type {
 } from "../model/protocol.ts";
 import type { Day, Dataset, Task, Week } from "../model/types.ts";
 import { ruleBar, shelf } from "./bands.ts";
+import { burndown } from "./burndown.ts";
 import { projectSheet, taskSheet, type ChordMap } from "./sheet.ts";
 import { idleDays, isBlocked, isOpen, urgencyOf, type UrgencySignal } from "./urgency.ts";
 
@@ -269,7 +270,7 @@ export function reportVm(data: Dataset, now: Day, week: Week, reportPath: string
       };
     });
 
-  const nextWeek = nextWeekOf(week);
+  const nextWeek = addWeeks(week, 1);
   const next = data.tasks
     .filter((t) => t.committed?.weekOf === nextWeek && t.death === null)
     .map((t) => ({ id: t.id, title: t.title, project: name(t) }));
@@ -293,17 +294,9 @@ export function reportVm(data: Dataset, now: Day, week: Week, reportPath: string
     happened,
     stuck,
     next,
+    burndown: burndown(data, week),
     reportPath,
   };
-}
-
-function nextWeekOf(week: Week): Week {
-  const [y, w] = week.split("-W");
-  const jan4 = new Date(Number(y), 0, 4);
-  const jan4DayNum = (jan4.getDay() + 6) % 7;
-  const monday = new Date(Number(y), 0, 4 - jan4DayNum);
-  monday.setDate(monday.getDate() + Number(w) * 7);
-  return toWeek(monday);
 }
 
 export function buildViewModel(

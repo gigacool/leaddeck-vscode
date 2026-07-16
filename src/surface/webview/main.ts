@@ -1,3 +1,4 @@
+import type { Burndown } from "../../derive/burndown.ts";
 import type {
   BandVm,
   CardVm,
@@ -43,6 +44,16 @@ function el<K extends keyof HTMLElementTagNameMap>(
   const n = document.createElement(tag);
   if (cls) n.className = cls;
   if (text !== undefined) n.textContent = text;
+  return n;
+}
+
+/** SVG needs its own namespace; `el` builds HTML only. Attributes, no children. */
+function svg<K extends keyof SVGElementTagNameMap>(
+  tag: K,
+  attrs: Record<string, string | number>,
+): SVGElementTagNameMap[K] {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, String(v));
   return n;
 }
 
@@ -679,6 +690,11 @@ function reportEl(r: ReportVm): HTMLElement {
   week.append(note);
   pg.append(week);
 
+  const burn = el("div", "pg-sec");
+  burn.append(section("③ Burndown", "committed this week, still open"));
+  burn.append(burndownEl(r.burndown));
+  pg.append(burn);
+
   const openBtn = el("button", "btn", `⧉ open ${r.reportPath}`);
   openBtn.onclick = () => post({ type: "openReport" });
   // FR-22 — the raw data, for retrospection he runs himself. Not a chart: a
@@ -714,6 +730,86 @@ function column(
   if (rows.length === 0) list.append(el("div", "empty", "—"));
   c.append(list);
   return c;
+}
+
+/**
+ * FR-21 — the burndown, and its fiction FLAGGED.
+ *
+ * The remaining line is the real, countable one. The ideal is drawn FLAT and
+ * dashed and captioned as fiction, because there are no estimates to slope it
+ * honestly and a faked slope is the lie the FR forbids. The caption is the
+ * feature, not a footnote: a burndown that hides the assumption is v1's chart.
+ */
+function burndownEl(b: Burndown): HTMLElement {
+  const box = el("div", "burn");
+
+  if (b.empty) {
+    box.append(el("div", "empty", "nothing committed to this week — nothing to burn down"));
+    return box;
+  }
+
+  const W = 320;
+  const H = 96;
+  const padL = 18;
+  const padR = 8;
+  const padT = 8;
+  const padB = 18;
+  const days = b.remaining;
+  const top = Math.max(b.ideal, 1); // y-axis max; never 0, so the line has room.
+
+  const x = (i: number): number => padL + (i * (W - padL - padR)) / (days.length - 1);
+  const y = (v: number): number => padT + (1 - v / top) * (H - padT - padB);
+
+  const chart = svg("svg", { class: "burn-svg", viewBox: `0 0 ${W} ${H}`, width: "100%" });
+
+  // Baseline (zero) and the top gridline — two references, nothing derived.
+  chart.append(
+    svg("line", { class: "burn-axis", x1: padL, y1: y(0), x2: W - padR, y2: y(0) }),
+    svg("line", { class: "burn-grid", x1: padL, y1: y(top), x2: W - padR, y2: y(top) }),
+  );
+
+  // The fiction: a flat dashed line at the starting height. Labelled below.
+  chart.append(
+    svg("line", {
+      class: "burn-ideal",
+      x1: padL,
+      y1: y(b.ideal),
+      x2: W - padR,
+      y2: y(b.ideal),
+    }),
+  );
+
+  // The real line: remaining committed, per day.
+  const pts = days.map((d, i) => `${x(i)},${y(d.count)}`).join(" ");
+  chart.append(svg("polyline", { class: "burn-real", points: pts }));
+  days.forEach((d, i) => {
+    chart.append(svg("circle", { class: "burn-dot", cx: x(i), cy: y(d.count), r: 2.5 }));
+  });
+
+  // y max, so the height is a stated number, not a guess from the pixels.
+  const yLabel = svg("text", { class: "burn-ylab", x: 2, y: y(top) + 3 });
+  yLabel.textContent = String(top);
+  chart.append(yLabel);
+
+  // Day initials, Mon→Sun. The x-axis is the week, stated.
+  const initials = ["M", "T", "W", "T", "F", "S", "S"];
+  days.forEach((_, i) => {
+    const t = svg("text", { class: "burn-xlab", x: x(i), y: H - 6 });
+    t.textContent = initials[i] ?? "";
+    chart.append(t);
+  });
+
+  box.append(chart);
+
+  const legend = el("div", "burn-legend");
+  const real = el("span", "burn-leg-real");
+  real.append(el("span", "burn-swatch real"), el("span", undefined, "remaining (real)"));
+  const ideal = el("span", "burn-leg-ideal");
+  ideal.append(el("span", "burn-swatch ideal"), el("span", undefined, b.idealLabel));
+  legend.append(real, ideal);
+  box.append(legend);
+
+  return box;
 }
 
 /**
