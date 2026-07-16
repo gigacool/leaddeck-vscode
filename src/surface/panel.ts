@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
 import { exportBundle } from "../derive/export.ts";
 import type { ChordMap } from "../derive/sheet.ts";
-import { buildViewModel, type UiState } from "../derive/viewmodel.ts";
-import { toDay, toWeek } from "../model/dates.ts";
+import { buildViewModel, STEPPER_WEEKS, type UiState } from "../derive/viewmodel.ts";
+import { addWeeks, toDay, toWeek } from "../model/dates.ts";
 import type { HostMessage, Mode, WebviewMessage } from "../model/protocol.ts";
 import type { Store } from "../store/store.ts";
 import { applyEdit } from "./edit.ts";
@@ -103,6 +103,7 @@ export class Workbench {
       drainOpen: false,
       open: null,
       asked: [],
+      weekOffset: 0,
       root: store.root,
       rootKind,
       // Platform-resolved here, because only this layer knows the platform.
@@ -160,8 +161,14 @@ export class Workbench {
     void this.#panel.webview.postMessage(msg);
   }
 
+  /**
+   * The report file for the currently-VIEWED week (FR-20). When he steps back,
+   * `⧉ open` and `⟨ pull ⟩` act on that week's file — `2026-W28.md`, not always
+   * this week's. `pull`/`openReport` read this too, so the stub lands in the
+   * file the section is showing.
+   */
   #reportPath(now: Date): string {
-    return `${this.#reportDir}/${toWeek(now)}.md`;
+    return `${this.#reportDir}/${addWeeks(toWeek(now), -this.#ui.weekOffset)}.md`;
   }
 
   async #onMessage(m: WebviewMessage): Promise<void> {
@@ -214,6 +221,15 @@ export class Workbench {
       case "export":
         await this.#export(now);
         return;
+
+      case "stepReport": {
+        // Clamp here, in the host — the webview asks, it does not know the
+        // bound. Six weeks (offset 0..5); the seventh row is export, not W-6.
+        const next = this.#ui.weekOffset + m.delta;
+        this.#ui = { ...this.#ui, weekOffset: Math.max(0, Math.min(STEPPER_WEEKS - 1, next)) };
+        this.render();
+        return;
+      }
 
       case "openSheet":
         // `asked` is per-sheet intent and dies with it: `＋ tag` on one task
@@ -433,7 +449,9 @@ export class Workbench {
     try {
       await vscode.workspace.fs.stat(uri);
     } catch {
-      const week = toWeek(now);
+      // The skeleton names the VIEWED week — the file is `2026-W28.md` when he
+      // has stepped back, so its heading must match, not always say this week.
+      const week = addWeeks(toWeek(now), -this.#ui.weekOffset);
       const skeleton = `# ${week}\n\n## What happened\n\n## Where I'm stuck\n\n## Next week\n`;
       await vscode.workspace.fs.writeFile(uri, Buffer.from(skeleton, "utf8"));
     }

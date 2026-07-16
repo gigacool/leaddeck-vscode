@@ -153,6 +153,24 @@ export interface ReportVm {
   next: { id: TaskId; title: string; project: string }[];
   /** FR-21 — the week's burndown, with its ideal line flagged fiction. */
   burndown: Burndown;
+  /**
+   * FR-20 — step back through iterations, BOUNDED at six. `back` walks one week
+   * older, `forward` one newer; both are false at the ends. The seventh row is
+   * NOT a seventh week — it is `— export —`, because the honest answer to
+   * "further back than six" is a data extract he retrospects himself, not a
+   * deeper analytics view. This is the exact tripwire: no range, no filter, no
+   * compare. If this grows one, the stepper is deleted, not extended.
+   */
+  stepper: {
+    /** 0 = this week … up to 5 = five weeks back. */
+    offset: number;
+    /** `this week` / `1 week ago` / … — stated, so the depth is never guessed. */
+    label: string;
+    canBack: boolean;
+    canForward: boolean;
+    /** True at the oldest step: the row past here reads `— export —`. */
+    atFloor: boolean;
+  };
   /** The path of the real file he writes in. The app never parses it back. */
   reportPath: string;
 }
@@ -192,6 +210,13 @@ export type WebviewMessage =
   | { type: "uncommit"; id: TaskId }
   | { type: "openReport" }
   | { type: "pull"; id: TaskId }
+  /**
+   * FR-20 — step the report one week older (`-1`) or newer (`+1`). The host
+   * clamps to 0..5; the webview never computes the bound, it only asks. There
+   * is deliberately no "jump to week N" — a picker is the range control the
+   * tripwire forbids.
+   */
+  | { type: "stepReport"; delta: -1 | 1 }
   /**
    * FR-22 — export the raw data, then get out of the way. The app owes data,
    * not opinions: this writes the four entity files as one JSON bundle to a

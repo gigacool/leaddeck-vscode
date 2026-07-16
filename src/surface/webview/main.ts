@@ -659,8 +659,49 @@ function section(name: string, note: string): HTMLElement {
   return h;
 }
 
+/**
+ * FR-20 — step back through iterations, bounded at six.
+ *
+ * `‹ older` walks one week back, `newer ›` one forward. At the sixth week the
+ * "further" affordance is NOT a seventh week — it is `— export —`, because the
+ * honest answer to "older than six" is the data extract, not a deeper view.
+ *
+ * There is no week picker, no range, no compare toggle here, and adding one is
+ * the tripwire: it would make this v1's analytics panel, and the fix would be
+ * to delete the stepper, not to keep the control.
+ */
+function stepperEl(s: ReportVm["stepper"]): HTMLElement {
+  const bar = el("div", "step");
+
+  const older = el("button", "step-btn", "‹ older");
+  older.disabled = !s.canBack;
+  older.onclick = () => post({ type: "stepReport", delta: -1 });
+
+  const label = el("span", "step-wk", s.label);
+
+  const newer = el("button", "step-btn", "newer ›");
+  newer.disabled = !s.canForward;
+  newer.onclick = () => post({ type: "stepReport", delta: 1 });
+
+  bar.append(older, label, newer);
+
+  // The seventh row. Only offered at the floor — before then, `‹ older` is the
+  // road back, and export would be a second way to do a thing there is already
+  // a way to do.
+  if (s.atFloor) {
+    const exportRow = el("button", "step-export", "— export —");
+    exportRow.title = "older than six weeks lives in the data extract, not the app";
+    exportRow.onclick = () => post({ type: "export" });
+    bar.append(exportRow);
+  }
+
+  return bar;
+}
+
 function reportEl(r: ReportVm): HTMLElement {
   const pg = el("div", "pg scroll");
+
+  pg.append(stepperEl(r.stepper));
 
   const risk = el("div", "pg-sec");
   risk.append(section("① At risk", "what needs a decision"));
@@ -691,7 +732,7 @@ function reportEl(r: ReportVm): HTMLElement {
   pg.append(week);
 
   const burn = el("div", "pg-sec");
-  burn.append(section("③ Burndown", "committed this week, still open"));
+  burn.append(section("③ Burndown", "committed that week, still open"));
   burn.append(burndownEl(r.burndown));
   pg.append(burn);
 

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { backlogVm, buildViewModel, kanbanVm, reportVm } from "../src/derive/viewmodel.ts";
 import type { UiState } from "../src/derive/viewmodel.ts";
+import { addWeeks } from "../src/model/dates.ts";
 import { aCapture, aProject, aStakeholder, aTask, dataset, daysAgo, daysAhead, NOW } from "./fixtures.ts";
 
 const WEEK = "2026-W29";
@@ -20,6 +21,7 @@ const ui = (over: Partial<UiState> = {}): UiState => ({
   drainOpen: false,
   open: null,
   asked: [],
+  weekOffset: 0,
   root: "/home/cedric/LeadDeck",
   rootKind: "home",
   captureChord: "Ctrl+Alt+L",
@@ -224,7 +226,7 @@ test("REPORT — what happened is doneAt inside the week, nothing else", () => {
       aTask({ project: p.id, title: "not done" }),
     ],
   });
-  const r = reportVm(d, NOW, WEEK, "/r/w.md");
+  const r = reportVm(d, NOW, WEEK, 0, "/r/w.md");
   assert.equal(r.happened.length, 1);
   assert.equal(r.happened[0]!.title, "this week");
 });
@@ -244,7 +246,7 @@ test("REPORT — 'where I'm stuck' is where a person owes the move", () => {
       }),
     ],
   });
-  const r = reportVm(d, NOW, WEEK, "/r/w.md");
+  const r = reportVm(d, NOW, WEEK, 0, "/r/w.md");
   assert.equal(r.stuck.length, 1);
   assert.equal(r.stuck[0]!.why, "blocked 9d");
 });
@@ -258,7 +260,7 @@ test("REPORT — 'next' is next week's commitments, not this week's", () => {
       aTask({ project: p.id, title: "next week", committed: { weekOf: "2026-W30" } }),
     ],
   });
-  const r = reportVm(d, NOW, WEEK, "/r/w.md");
+  const r = reportVm(d, NOW, WEEK, 0, "/r/w.md");
   assert.equal(r.next.length, 1);
   assert.equal(r.next[0]!.title, "next week");
 });
@@ -267,7 +269,7 @@ test("REPORT — the file is named, never parsed", () => {
   // AD-9: the app inserts stubs at the cursor and never reads it back. The
   // ViewModel carries a PATH, not content -- that is the architecture visible
   // in the type.
-  const r = reportVm(dataset(), NOW, WEEK, "/home/cedric/LeadDeck/reports/2026-W29.md");
+  const r = reportVm(dataset(), NOW, WEEK, 0, "/home/cedric/LeadDeck/reports/2026-W29.md");
   assert.equal(r.reportPath, "/home/cedric/LeadDeck/reports/2026-W29.md");
   assert.equal("content" in r, false);
 });
@@ -280,7 +282,49 @@ test("REPORT — at risk is capped; it is a section, not a list of everything", 
       aTask({ project: p.id, title: `late ${i}`, deadline: daysAgo(i + 1) }),
     ),
   });
-  assert.equal(reportVm(d, NOW, WEEK, "/r/w.md").atRisk.length, 3);
+  assert.equal(reportVm(d, NOW, WEEK, 0, "/r/w.md").atRisk.length, 3);
+});
+
+test("FR-20 — at offset 0 the stepper is at the newest edge, not the floor", () => {
+  const s = reportVm(dataset(), NOW, WEEK, 0, "/r/w.md").stepper;
+  assert.equal(s.offset, 0);
+  assert.equal(s.label, "this week");
+  assert.equal(s.canForward, false); // there is no week newer than now
+  assert.equal(s.canBack, true);
+  assert.equal(s.atFloor, false);
+});
+
+test("FR-20 — the stepper is BOUNDED at six: the sixth week is the floor", () => {
+  // Offset 5 is the sixth week (0..5). No week seven — the row past here is
+  // export. This is the tripwire in a test: if the bound grows, this breaks.
+  const s = reportVm(dataset(), NOW, addWeeks(WEEK, -5), 5, "/r/w.md").stepper;
+  assert.equal(s.offset, 5);
+  assert.equal(s.label, "5 weeks ago");
+  assert.equal(s.canBack, false); // cannot step to a seventh week
+  assert.equal(s.canForward, true);
+  assert.equal(s.atFloor, true); // the — export — row is offered here, and only here
+});
+
+test("FR-20 — stepping back moves the REPORT's week; backlog stays on now", () => {
+  const p = aProject();
+  const d = dataset({
+    projects: [...dataset().projects, p],
+    tasks: [
+      // Done this week (W29) and two weeks ago (W27).
+      aTask({ project: p.id, title: "this week", status: "done", doneAt: "2026-07-15T10:00:00.000Z" }),
+      aTask({ project: p.id, title: "two weeks ago", status: "done", doneAt: "2026-07-01T10:00:00.000Z" }),
+    ],
+  });
+
+  const back = buildViewModel(d, NOW, WEEK, ui({ mode: "report", weekOffset: 2 }), "/r/W27.md");
+  assert.equal(back.report!.week, addWeeks(WEEK, -2)); // 2026-W27
+  assert.equal(back.report!.happened.length, 1);
+  assert.equal(back.report!.happened[0]!.title, "two weeks ago");
+
+  // The shelf never steps back — it is always now, or stepping it would be the
+  // analytics panel by another door.
+  const shelf = buildViewModel(d, NOW, WEEK, ui({ mode: "backlog", weekOffset: 2 }), "/r/w.md");
+  assert.notEqual(shelf.backlog, null);
 });
 
 test("a signal's TEXT is decided here — the webview renders, it never computes", () => {

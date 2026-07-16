@@ -664,6 +664,16 @@ body {
 .ri .add { font-family: var(--mono); font-size: 8.5px; color: var(--fg-tertiary); border: 1px dashed var(--border-strong); padding: 0 3px; cursor: pointer; background: none; }
 .ri .add:hover { color: var(--week); border-color: var(--week); }
 
+/* FR-20 — the six-week stepper. Navigation, never a range control. */
+.step { display: flex; align-items: center; gap: 8px; padding: 5px 10px; background: var(--chrome); border-bottom: 1px solid var(--border); }
+.step-btn { font-family: var(--mono); font-size: 9.5px; color: var(--fg-dim); background: none; border: 1px solid var(--border-strong); border-radius: 2px; padding: 1px 7px; cursor: pointer; }
+.step-btn:hover:not(:disabled) { color: var(--fg); border-color: var(--week); }
+.step-btn:disabled { opacity: .35; cursor: default; }
+.step-wk { font-family: var(--mono); font-size: 10px; color: var(--week); min-width: 84px; text-align: center; }
+/* The seventh row: an EXIT to the extract, styled unlike a week button so it never reads as "week 7". */
+.step-export { margin-left: auto; font-family: var(--mono); font-size: 9px; color: var(--fg-tertiary); background: none; border: 1px dashed var(--border-strong); padding: 1px 8px; cursor: pointer; }
+.step-export:hover { color: var(--fg-dim); border-color: var(--fg-dim); }
+
 /* FR-21 — the burndown, and its fiction flagged. */
 .burn { padding: 8px 10px 6px; }
 .burn-svg { display: block; max-width: 360px; }

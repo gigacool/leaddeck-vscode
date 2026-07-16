@@ -50,6 +50,13 @@ export interface UiState {
    */
   asked: SheetField[];
   /**
+   * FR-20 — how many weeks BACK the report is viewing. 0 is this week; the
+   * stepper is bounded at six, so this never exceeds 5. It affects the REPORT
+   * only: backlog and kanban are always "now", because stepping them back would
+   * be the analytics panel arriving by another door.
+   */
+  weekOffset: number;
+  /**
    * Passed in, never derived. Chords are platform-specific and live in
    * `surface/` — this layer cannot import `vscode` to find out (AD-3).
    */
@@ -58,6 +65,14 @@ export interface UiState {
 }
 
 const STALE_DAYS = 14;
+
+/**
+ * FR-20 — the stepper is bounded at SIX. Offset 0..5 are weeks; the seventh row
+ * is `— export —`, not a seventh week. The bound is the feature: six weeks is
+ * the horizon of "recent iterations", and anything older is a retrospective he
+ * runs on the export, not in the app.
+ */
+export const STEPPER_WEEKS = 6;
 
 function signalVm(s: UrgencySignal): SignalVm {
   switch (s.kind) {
@@ -247,7 +262,13 @@ export function kanbanVm(data: Dataset, now: Day, week: Week): KanbanVm {
  * the prose: ~80% of the report is text the app cannot produce, and the section
  * works precisely to the extent it doesn't help.
  */
-export function reportVm(data: Dataset, now: Day, week: Week, reportPath: string): ReportVm {
+export function reportVm(
+  data: Dataset,
+  now: Day,
+  week: Week,
+  offset: number,
+  reportPath: string,
+): ReportVm {
   const projectTitle = new Map(data.projects.map((p) => [p.id, p.title]));
   const name = (t: Task): string => projectTitle.get(t.project) ?? "";
 
@@ -295,8 +316,21 @@ export function reportVm(data: Dataset, now: Day, week: Week, reportPath: string
     stuck,
     next,
     burndown: burndown(data, week),
+    stepper: {
+      offset,
+      label: offsetLabel(offset),
+      canForward: offset > 0,
+      canBack: offset < STEPPER_WEEKS - 1,
+      atFloor: offset === STEPPER_WEEKS - 1,
+    },
     reportPath,
   };
+}
+
+function offsetLabel(offset: number): string {
+  if (offset === 0) return "this week";
+  if (offset === 1) return "1 week ago";
+  return `${offset} weeks ago`;
 }
 
 export function buildViewModel(
@@ -306,6 +340,9 @@ export function buildViewModel(
   ui: UiState,
   reportPath: string,
 ): ViewModel {
+  // FR-20 — the report views a week BACK; backlog and kanban stay on `now`.
+  // Stepping the shelf back would be the analytics panel by another door.
+  const viewedWeek = addWeeks(week, -ui.weekOffset);
   return {
     mode: ui.mode,
     root: ui.root,
@@ -315,6 +352,7 @@ export function buildViewModel(
         ? backlogVm(data, now, week, ui.drainOpen, ui.captureChord, ui.open, ui.chords, ui.asked)
         : null,
     kanban: ui.mode === "kanban" ? kanbanVm(data, now, week) : null,
-    report: ui.mode === "report" ? reportVm(data, now, week, reportPath) : null,
+    report:
+      ui.mode === "report" ? reportVm(data, now, viewedWeek, ui.weekOffset, reportPath) : null,
   };
 }

@@ -481,8 +481,27 @@
     h.append(el("span", "pg-sec-n", name), el("span", "pg-sec-w", note));
     return h;
   }
+  function stepperEl(s) {
+    const bar = el("div", "step");
+    const older = el("button", "step-btn", "\u2039 older");
+    older.disabled = !s.canBack;
+    older.onclick = () => post({ type: "stepReport", delta: -1 });
+    const label2 = el("span", "step-wk", s.label);
+    const newer = el("button", "step-btn", "newer \u203A");
+    newer.disabled = !s.canForward;
+    newer.onclick = () => post({ type: "stepReport", delta: 1 });
+    bar.append(older, label2, newer);
+    if (s.atFloor) {
+      const exportRow = el("button", "step-export", "\u2014 export \u2014");
+      exportRow.title = "older than six weeks lives in the data extract, not the app";
+      exportRow.onclick = () => post({ type: "export" });
+      bar.append(exportRow);
+    }
+    return bar;
+  }
   function reportEl(r) {
     const pg = el("div", "pg scroll");
+    pg.append(stepperEl(r.stepper));
     const risk = el("div", "pg-sec");
     risk.append(section("\u2460 At risk", "what needs a decision"));
     const risks = el("div", "risks");
@@ -508,7 +527,7 @@
     week.append(note);
     pg.append(week);
     const burn = el("div", "pg-sec");
-    burn.append(section("\u2462 Burndown", "committed this week, still open"));
+    burn.append(section("\u2462 Burndown", "committed that week, still open"));
     burn.append(burndownEl(r.burndown));
     pg.append(burn);
     const openBtn = el("button", "btn", `\u29C9 open ${r.reportPath}`);
