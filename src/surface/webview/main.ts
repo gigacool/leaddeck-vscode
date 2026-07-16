@@ -673,15 +673,17 @@ function section(name: string, note: string): HTMLElement {
 function stepperEl(s: ReportVm["stepper"]): HTMLElement {
   const bar = el("div", "step");
 
+  // `older` walks FURTHER BACK, which is a HIGHER offset (+1); `newer` walks
+  // toward now, a lower offset (-1). The offset is "weeks ago", so older adds.
   const older = el("button", "step-btn", "‹ older");
   older.disabled = !s.canBack;
-  older.onclick = () => post({ type: "stepReport", delta: -1 });
+  older.onclick = () => post({ type: "stepReport", delta: 1 });
 
   const label = el("span", "step-wk", s.label);
 
   const newer = el("button", "step-btn", "newer ›");
   newer.disabled = !s.canForward;
-  newer.onclick = () => post({ type: "stepReport", delta: 1 });
+  newer.onclick = () => post({ type: "stepReport", delta: -1 });
 
   bar.append(older, label, newer);
 

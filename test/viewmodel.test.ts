@@ -289,8 +289,12 @@ test("FR-20 — at offset 0 the stepper is at the newest edge, not the floor", (
   const s = reportVm(dataset(), NOW, WEEK, 0, "/r/w.md").stepper;
   assert.equal(s.offset, 0);
   assert.equal(s.label, "this week");
-  assert.equal(s.canForward, false); // there is no week newer than now
-  assert.equal(s.canBack, true);
+  // canForward gates "newer" (offset DOWN); canBack gates "older" (offset UP).
+  // At now, there is nothing newer, but you can always go older. The `‹ older`
+  // button must therefore post the +1 (offset-increasing) direction — wiring it
+  // to -1 clamps to 0 and the stepper looks dead, which is exactly what shipped.
+  assert.equal(s.canForward, false); // no week newer than now → `newer ›` disabled
+  assert.equal(s.canBack, true); // `‹ older` enabled, and it must step offset UP
   assert.equal(s.atFloor, false);
 });
 

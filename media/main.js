@@ -485,11 +485,11 @@
     const bar = el("div", "step");
     const older = el("button", "step-btn", "\u2039 older");
     older.disabled = !s.canBack;
-    older.onclick = () => post({ type: "stepReport", delta: -1 });
+    older.onclick = () => post({ type: "stepReport", delta: 1 });
     const label2 = el("span", "step-wk", s.label);
     const newer = el("button", "step-btn", "newer \u203A");
     newer.disabled = !s.canForward;
-    newer.onclick = () => post({ type: "stepReport", delta: 1 });
+    newer.onclick = () => post({ type: "stepReport", delta: -1 });
     bar.append(older, label2, newer);
     if (s.atFloor) {
       const exportRow = el("button", "step-export", "\u2014 export \u2014");
