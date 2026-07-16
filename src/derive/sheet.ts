@@ -92,20 +92,24 @@ export function taskSheet(
   now: Day,
   week: Week,
   chords: ChordMap,
+  asked: SheetField[] = [],
 ): SheetVm {
   const signal = urgencyOf(task, data, now);
   const project = data.projects.find((p) => p.id === task.project);
 
-  // A field is "on" when it holds something. Nothing else marks it — there is
-  // no per-field visibility flag, because that would be a second model of the
-  // same fact.
+  // A field is "on" when it holds something, OR when he asked for it and it
+  // cannot hold a placeholder. `deadline` defaults to today and `subtasks` to
+  // one blank row, so those are answered by data alone — but an empty tag is
+  // not a tag and a nameless stakeholder is not a person, so those three carry
+  // their intent in `asked` instead. It is the same question ("is this on?"),
+  // not a second model of it.
   const present: SheetField[] = [];
   if (task.deadline !== null) present.push("deadline");
   if (task.description.length > 0) present.push("description");
   if (task.subtasks.length > 0) present.push("subtasks");
-  if (task.logMessages.length > 0) present.push("log");
-  if (task.stakeholders.length > 0) present.push("stakeholders");
-  if (task.tags.length > 0) present.push("tags");
+  if (task.logMessages.length > 0 || asked.includes("log")) present.push("log");
+  if (task.stakeholders.length > 0 || asked.includes("stakeholders")) present.push("stakeholders");
+  if (task.tags.length > 0 || asked.includes("tags")) present.push("tags");
   if (task.committed !== null) present.push("commit");
 
   return {
@@ -154,6 +158,7 @@ export function projectSheet(
   data: Dataset,
   now: Day,
   chords: ChordMap,
+  asked: SheetField[] = [],
 ): SheetVm {
   const tasks = data.tasks.filter((t) => t.project === project.id && t.death === null);
 
@@ -168,8 +173,8 @@ export function projectSheet(
   const present: SheetField[] = [];
   if (project.deadline !== null) present.push("deadline");
   if (project.description.length > 0) present.push("description");
-  if (project.stakeholders.length > 0) present.push("stakeholders");
-  if (project.tags.length > 0) present.push("tags");
+  if (project.stakeholders.length > 0 || asked.includes("stakeholders")) present.push("stakeholders");
+  if (project.tags.length > 0 || asked.includes("tags")) present.push("tags");
 
   const n = tasks.length;
   return {

@@ -12,12 +12,37 @@
  * grew a panel; anything else is a costume.
  */
 
+/*
+ * THE STEPS ARE DIRECTIONAL, AND THAT IS WHY LIGHT MODE BROKE.
+ *
+ * These four were eyedropped from the Dark Modern mockup and encode dark-mode
+ * reasoning: "a step down is toward black, a raised surface is toward white".
+ * Mapping them to --vscode-* vars made the HUES theme-aware but left the
+ * DIRECTION hardcoded. In a light theme --bg is near-white, so --chrome and
+ * --raised mixed white toward white: every surface collapsed to one value and
+ * the whole shelf went grey-on-grey.
+ *
+ * `--ink` / `--lift` are the fix: the direction itself becomes a variable, and
+ * light mode inverts the pair. Nothing below this block needs to know which
+ * theme is live. (NFR-3: a hardcoded hex is a defect — so is a hardcoded
+ * direction.)
+ */
 :root {
   --bg: var(--vscode-editor-background, #1f1f1f);
-  --page: color-mix(in srgb, var(--bg) 92%, #000);
-  --surface: color-mix(in srgb, var(--bg) 96%, #000);
-  --chrome: color-mix(in srgb, var(--bg) 90%, #fff 2%);
-  --raised: color-mix(in srgb, var(--bg) 88%, #fff 6%);
+  /* Dark: recede toward black, lift toward white. */
+  --ink: #000;
+  --lift: #fff;
+
+  --page: color-mix(in srgb, var(--bg) 92%, var(--ink));
+  --surface: color-mix(in srgb, var(--bg) 96%, var(--ink));
+  --chrome: color-mix(in srgb, var(--bg) 90%, var(--lift) 2%);
+  --raised: color-mix(in srgb, var(--bg) 88%, var(--lift) 6%);
+
+  /* Pip tint strength — the mockup's eyedropped values. See .pip below. */
+  --tint: 25%;
+  --tint-b: 40%;
+  --tint-on: 35%;
+  --tint-on-b: 55%;
   --hover: var(--vscode-list-hoverBackground, #242424);
   --sel: var(--vscode-list-activeSelectionBackground, #04395e);
 
@@ -46,6 +71,32 @@
 
   --mono: var(--vscode-editor-font-family, "SF Mono", Monaco, Menlo, Consolas, monospace);
   --ui: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif);
+}
+
+/*
+ * LIGHT — the direction inverts, and the tints get stronger.
+ *
+ * Two separate bugs live here. (1) The steps: recede toward WHITE, lift toward
+ * BLACK. (2) The tints: a 9px pip at 25% of --fg-faint reads fine on near-black
+ * and vanishes on near-white, because a diluted colour has nothing to contrast
+ * against. Density is the feature (17 projects × 63 tasks on one shelf), so an
+ * invisible pip is not a cosmetic bug — it is the Backlog not working.
+ */
+body.vscode-light,
+body.vscode-high-contrast-light {
+  --ink: #fff;
+  --lift: #000;
+  /* A light theme needs a real border, not a hairline tint of the background. */
+  --border: var(--vscode-panel-border, #d4d4d4);
+  --border-strong: var(--vscode-widget-border, #a0a0a0);
+  /* --fg-faint diluted into white is near-invisible; keep almost all of it. */
+  --fg-tertiary: color-mix(in srgb, var(--fg-faint) 95%, var(--bg));
+
+  /* A pip must hold its own against white. Roughly double the dark tints. */
+  --tint: 55%;
+  --tint-b: 80%;
+  --tint-on: 65%;
+  --tint-on-b: 90%;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -218,13 +269,19 @@ body {
   border: 1px solid var(--border);
   background: var(--hover);
 }
-.pip.todo { background: color-mix(in srgb, var(--fg-faint) 25%, var(--bg)); border-color: color-mix(in srgb, var(--fg-faint) 35%, var(--bg)); }
+/*
+ * `--tint` / `--tint-b` — how much of a pip's colour survives the mix into the
+ * background. Dark keeps the mockup's eyedropped values; light needs far more,
+ * or a 9px square dissolves into white. The percentages ARE the variable, so
+ * every pip rule below reads the same in both themes.
+ */
+.pip.todo { background: color-mix(in srgb, var(--fg-faint) var(--tint), var(--bg)); border-color: color-mix(in srgb, var(--fg-faint) var(--tint-b), var(--bg)); }
 .pip.doing { background: var(--accent); border-color: var(--accent-2); }
-.pip.done { background: color-mix(in srgb, var(--ok) 35%, var(--bg)); border-color: color-mix(in srgb, var(--ok) 50%, var(--bg)); }
-.pip.stale { background: color-mix(in srgb, var(--warn) 25%, var(--bg)); border-color: color-mix(in srgb, var(--warn) 45%, var(--bg)); }
-.pip.block { background: color-mix(in srgb, var(--danger) 25%, var(--bg)); border-color: color-mix(in srgb, var(--danger) 45%, var(--bg)); }
+.pip.done { background: color-mix(in srgb, var(--ok) var(--tint-on), var(--bg)); border-color: color-mix(in srgb, var(--ok) var(--tint-on-b), var(--bg)); }
+.pip.stale { background: color-mix(in srgb, var(--warn) var(--tint), var(--bg)); border-color: color-mix(in srgb, var(--warn) var(--tint-b), var(--bg)); }
+.pip.block { background: color-mix(in srgb, var(--danger) var(--tint), var(--bg)); border-color: color-mix(in srgb, var(--danger) var(--tint-b), var(--bg)); }
 /* Never colour alone: raw is dashed as well as warn. */
-.pip.raw { background: color-mix(in srgb, var(--warn) 20%, var(--bg)); border-color: color-mix(in srgb, var(--warn) 55%, var(--bg)); border-style: dashed; }
+.pip.raw { background: color-mix(in srgb, var(--warn) var(--tint), var(--bg)); border-color: color-mix(in srgb, var(--warn) var(--tint-on-b), var(--bg)); border-style: dashed; }
 /* outline, not border -- a border would grow the 9x12 box and reflow the strip. */
 .pip.wk { outline: 1px solid var(--week); outline-offset: 1px; }
 
@@ -507,7 +564,12 @@ body {
  */
 .depth { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--surface); border-top: 1px solid var(--border); flex-wrap: wrap; }
 .depth-l { font-family: var(--mono); font-size: 9px; color: var(--fg-tertiary); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
-.depth-b { font-family: var(--mono); font-size: 10px; background: transparent; border: 1px dashed var(--border-strong); color: var(--fg-faint); padding: 1.5px 7px; white-space: nowrap; cursor: pointer; }
+/*
+ * --fg-faint is VS Code's *disabled* foreground. The rail is the whole depth-
+ * on-demand mechanism and the only way most fields ever get added — reading it
+ * as disabled is the offer failing to look like an offer. Dim, not disabled.
+ */
+.depth-b { font-family: var(--mono); font-size: 10px; background: transparent; border: 1px dashed var(--border-strong); color: var(--fg-dim); padding: 1.5px 7px; white-space: nowrap; cursor: pointer; }
 .depth-b:hover { border-color: var(--accent-2); color: var(--fg); }
 .depth-b .k { color: var(--fg-tertiary); margin-left: 5px; font-size: 8.5px; }
 .depth-b.die { border-color: color-mix(in srgb, var(--death) 60%, var(--bg)); color: color-mix(in srgb, var(--death) 55%, var(--fg)); }

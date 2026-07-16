@@ -123,7 +123,7 @@ function stripEl(s: StripVm): HTMLElement {
   return row;
 }
 
-function bandEl(b: BandVm): HTMLElement {
+function bandEl(b: BandVm, sheet: SheetVm | null): HTMLElement {
   const band = el("div", `band ${b.kind}`);
 
   const h = el("div", "band-h");
@@ -158,7 +158,16 @@ function bandEl(b: BandVm): HTMLElement {
     band.append(row);
   }
 
-  for (const s of b.strips) band.append(stripEl(s));
+  // The sheet unfolds UNDER ITS OWN ROW, in the shelf's own flow — not at the
+  // foot of the band. With 17 projects in QUIET, appending after the band put
+  // the editor 17 rows below the strip he clicked, which reads as "it opened
+  // somewhere else" rather than "it opened here".
+  for (const s of b.strips) {
+    band.append(stripEl(s));
+    if (sheet && (s.id === sheet.id || s.pips.some((p) => p.id === sheet.id))) {
+      band.append(sheetEl(sheet));
+    }
+  }
   return band;
 }
 
@@ -532,21 +541,18 @@ function debounce(fn: () => void, ms: number): () => void {
 
 function backlogEl(b: BacklogVm): HTMLElement {
   const shelf = el("div", `shelf scroll${b.drain ? " draining" : ""}`);
-  let sheetPlaced = false;
+  // `bandEl` places the sheet under its own strip. Track whether any band
+  // claimed it, so a sheet that matches no row still reaches the screen.
+  const claimed =
+    b.sheet !== null &&
+    b.bands.some((band) =>
+      band.strips.some((s) => s.id === b.sheet!.id || s.pips.some((p) => p.id === b.sheet!.id)),
+    );
   for (const band of b.bands) {
-    shelf.append(bandEl(band));
+    shelf.append(bandEl(band, claimed ? b.sheet : null));
     if (band.kind === "unsorted" && b.drain) shelf.append(drainEl(b.drain));
-    // The sheet unfolds in the shelf's own flow, under the row it belongs to.
-    if (b.sheet && !sheetPlaced) {
-      const belongsHere = band.strips.some(
-        (s) => s.id === b.sheet!.id || s.pips.some((p) => p.id === b.sheet!.id),
-      );
-      if (belongsHere) {
-        shelf.append(sheetEl(b.sheet));
-        sheetPlaced = true;
-      }
-    }
   }
+  const sheetPlaced = claimed;
   // The host says a sheet is open, so a sheet MUST be on screen. If it matched
   // no row — a task whose pip is filtered out, a project the shelf did not draw
   // — placing it by flow would silently render nothing, and a click that opens

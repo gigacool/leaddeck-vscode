@@ -101,6 +101,7 @@ export class Workbench {
       mode: "backlog",
       drainOpen: false,
       open: null,
+      asked: [],
       root: store.root,
       rootKind,
       // Platform-resolved here, because only this layer knows the platform.
@@ -210,13 +211,15 @@ export class Workbench {
         return;
 
       case "openSheet":
-        this.#ui = { ...this.#ui, open: { kind: m.kind, id: m.id } };
+        // `asked` is per-sheet intent and dies with it: `＋ tag` on one task
+        // must not open a blank tag row on the next one he clicks.
+        this.#ui = { ...this.#ui, open: { kind: m.kind, id: m.id }, asked: [] };
         this.render();
         return;
 
       case "closeSheet":
         // Esc closes; nothing is lost, because nothing was ever unsaved.
-        this.#ui = { ...this.#ui, open: null };
+        this.#ui = { ...this.#ui, open: null, asked: [] };
         this.render();
         return;
 
@@ -234,6 +237,20 @@ export class Workbench {
         // Every remaining message is a sheet edit. Saves as you type.
         const open = this.#ui.open;
         if (!open) return;
+
+        // The rail's click is INTENT, and for tags/stakeholders/log there is
+        // nothing to write yet — an empty tag is not a tag. Record the ask so
+        // the field renders; `applyEdit` still runs, because the fields that
+        // CAN take a placeholder (deadline, subtasks) are written there.
+        if (m.type === "addField" && !this.#ui.asked.includes(m.field)) {
+          this.#ui = { ...this.#ui, asked: [...this.#ui.asked, m.field] };
+        }
+        // `− remove tag` must retract the ask too, or the row he just dismissed
+        // comes straight back on the next paint.
+        if (m.type === "removeField") {
+          this.#ui = { ...this.#ui, asked: this.#ui.asked.filter((f) => f !== m.field) };
+        }
+
         await applyEdit(this.#store, open, m, now);
         this.render();
         return;

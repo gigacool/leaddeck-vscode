@@ -68,7 +68,7 @@
     row.append(right);
     return row;
   }
-  function bandEl(b) {
+  function bandEl(b, sheet) {
     const band = el("div", `band ${b.kind}`);
     const h = el("div", "band-h");
     h.append(el("span", "band-name", b.label), el("span", "band-why", b.predicate));
@@ -94,7 +94,12 @@
       row.append(pips, el("span"), el("span"));
       band.append(row);
     }
-    for (const s of b.strips) band.append(stripEl(s));
+    for (const s of b.strips) {
+      band.append(stripEl(s));
+      if (sheet && (s.id === sheet.id || s.pips.some((p) => p.id === sheet.id))) {
+        band.append(sheetEl(sheet));
+      }
+    }
     return band;
   }
   function drainEl(d) {
@@ -397,20 +402,14 @@
   }
   function backlogEl(b) {
     const shelf = el("div", `shelf scroll${b.drain ? " draining" : ""}`);
-    let sheetPlaced = false;
+    const claimed = b.sheet !== null && b.bands.some(
+      (band) => band.strips.some((s) => s.id === b.sheet.id || s.pips.some((p) => p.id === b.sheet.id))
+    );
     for (const band of b.bands) {
-      shelf.append(bandEl(band));
+      shelf.append(bandEl(band, claimed ? b.sheet : null));
       if (band.kind === "unsorted" && b.drain) shelf.append(drainEl(b.drain));
-      if (b.sheet && !sheetPlaced) {
-        const belongsHere = band.strips.some(
-          (s) => s.id === b.sheet.id || s.pips.some((p) => p.id === b.sheet.id)
-        );
-        if (belongsHere) {
-          shelf.append(sheetEl(b.sheet));
-          sheetPlaced = true;
-        }
-      }
     }
+    const sheetPlaced = claimed;
     if (b.sheet && !sheetPlaced) shelf.append(sheetEl(b.sheet));
     if (b.bands.length === 0) {
       shelf.append(

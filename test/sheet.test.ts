@@ -74,6 +74,45 @@ test("FR-25 — `log` is the ONE field that stays on the rail once present", () 
   assert.ok(s.rail.some((r) => r.field === "log"));
 });
 
+/*
+ * THE INERT RAIL — found in the first real run, invisible to every test.
+ *
+ * `＋ tag` / `＋ stakeholder` / `＋ log note` write NOTHING when clicked: an
+ * empty tag is not a tag, and a nameless stakeholder is not a person. So
+ * presence-from-stored-data alone left them absent, the repaint was identical,
+ * and three of the seven rail buttons did nothing at all.
+ *
+ * `asked` carries the intent. It is the same question ("is this field on?"),
+ * answered by data where data can answer it and by intent where it cannot.
+ */
+test("＋ tag OPENS the tag row — the rail button is not inert", () => {
+  const bare = sheetOf(aTask());
+  assert.equal(bare.tags, null); // not asked, not present
+
+  const asked = taskSheet(aTask(), dataset(), NOW, WEEK, CHORDS, ["tags"]);
+  assert.deepEqual(asked.tags, []); // asked: an EMPTY row, ready to type into
+  assert.ok(!asked.rail.some((r) => r.field === "tags")); // the offer is spent
+});
+
+test("＋ stakeholder opens an empty row without inventing a person", () => {
+  const asked = taskSheet(aTask(), dataset(), NOW, WEEK, CHORDS, ["stakeholders"]);
+  assert.deepEqual(asked.stakeholders, []);
+  // Crucially: asking did NOT create a stakeholder. AD-5 — no id from a name.
+  assert.equal(asked.signal.kind, "quiet");
+});
+
+test("＋ log note opens the add-line, and log STAYS on the rail", () => {
+  const asked = taskSheet(aTask(), dataset(), NOW, WEEK, CHORDS, ["log"]);
+  assert.deepEqual(asked.log, []);
+  assert.ok(asked.rail.some((r) => r.field === "log"));
+});
+
+test("asked is intent, not data: a project's rail opens the same way", () => {
+  const p = aProject();
+  const s = projectSheet(p, dataset({ projects: [p] }), NOW, CHORDS, ["tags"]);
+  assert.deepEqual(s.tags, []);
+});
+
 test("FR-25 — the rail carries a platform-resolved chord, never a Mac glyph on Windows", () => {
   // `derive/` cannot reach `vscode` to know the platform, so the chord is passed
   // in. Printing ⌘W on Windows would be a lie — and ⌘W is *close the window*.

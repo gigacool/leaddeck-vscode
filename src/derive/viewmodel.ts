@@ -7,6 +7,7 @@ import type {
   Mode,
   PipVm,
   ReportVm,
+  SheetField,
   SignalVm,
   StripVm,
   ViewModel,
@@ -32,6 +33,21 @@ export interface UiState {
   rootKind: "local" | "configured" | "home";
   /** Which sheet is unfolded, if any. UI state — never persisted. */
   open: { kind: "task" | "project"; id: string } | null;
+  /**
+   * Fields ASKED FOR but still empty — `＋ tag` clicked, nothing typed yet.
+   *
+   * `tags`, `stakeholders` and `log` cannot be added by writing a placeholder
+   * the way `deadline` (today) or `subtasks` (one blank row) can: an empty tag
+   * is not a tag, and a nameless stakeholder is not a person. So presence can't
+   * be read from stored data alone for these three, and without this the rail
+   * buttons were INERT — they mutated nothing, the repaint was identical, and
+   * the click did nothing at all.
+   *
+   * It lives here and not in the webview because the webview holds no state
+   * across messages (AD-11). It is intent, not data: never persisted, and it
+   * dies with the sheet.
+   */
+  asked: SheetField[];
   /**
    * Passed in, never derived. Chords are platform-specific and live in
    * `surface/` — this layer cannot import `vscode` to find out (AD-3).
@@ -99,6 +115,7 @@ export function backlogVm(
   captureChord = "Ctrl+Alt+L",
   open: UiState["open"] = null,
   chords: ChordMap = DEFAULT_CHORDS,
+  asked: SheetField[] = [],
 ): BacklogVm {
   const bands = shelf(data, now);
   const unsorted = data.captures.filter((c) => c.state === "unsorted");
@@ -142,10 +159,10 @@ export function backlogVm(
   if (open) {
     if (open.kind === "task") {
       const t = data.tasks.find((x) => x.id === open.id);
-      if (t) sheet = taskSheet(t, data, now, week, chords);
+      if (t) sheet = taskSheet(t, data, now, week, chords, asked);
     } else {
       const p = data.projects.find((x) => x.id === open.id);
-      if (p) sheet = projectSheet(p, data, now, chords);
+      if (p) sheet = projectSheet(p, data, now, chords, asked);
     }
   }
 
@@ -302,7 +319,7 @@ export function buildViewModel(
     rootKind: ui.rootKind,
     backlog:
       ui.mode === "backlog"
-        ? backlogVm(data, now, week, ui.drainOpen, ui.captureChord, ui.open, ui.chords)
+        ? backlogVm(data, now, week, ui.drainOpen, ui.captureChord, ui.open, ui.chords, ui.asked)
         : null,
     kanban: ui.mode === "kanban" ? kanbanVm(data, now, week) : null,
     report: ui.mode === "report" ? reportVm(data, now, week, reportPath) : null,

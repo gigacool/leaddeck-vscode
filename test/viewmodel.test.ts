@@ -19,6 +19,7 @@ const ui = (over: Partial<UiState> = {}): UiState => ({
   mode: "backlog",
   drainOpen: false,
   open: null,
+  asked: [],
   root: "/home/cedric/LeadDeck",
   rootKind: "home",
   captureChord: "Ctrl+Alt+L",
