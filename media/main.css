@@ -184,7 +184,9 @@ body {
  */
 .strip, .unsorted-pips {
   display: grid;
-  grid-template-columns: 15px minmax(150px, 215px) minmax(0, 1fr) auto;
+  /* The 5th column is `＋ task`. .unsorted-pips gets it too — as an empty
+     spacer — because the shared alignment above is the whole point. */
+  grid-template-columns: 15px minmax(150px, 215px) minmax(0, 1fr) 16px auto;
   gap: 9px;
   align-items: center;
   padding: 2px 10px 2px 8px;
@@ -227,6 +229,20 @@ body {
 .pip.wk { outline: 1px solid var(--week); outline-offset: 1px; }
 
 /* ---- the strip's right cluster ---- */
+
+/*
+ * `＋ task` — an offer, not a chore. Invisible until the row is hovered, so 17
+ * strips do not read as 17 pending actions; it holds its column either way, so
+ * nothing reflows on hover.
+ */
+.p-add {
+  background: 0; border: 0; padding: 0; cursor: pointer;
+  font-family: var(--mono); font-size: 12px; line-height: 1;
+  color: transparent; transition: color .1s;
+}
+.strip:hover .p-add { color: var(--fg-faint); }
+.p-add:hover { color: var(--fg) !important; }
+.p-add:focus-visible { color: var(--fg); outline: 1px solid var(--accent-2); outline-offset: 1px; }
 
 .p-right { display: flex; align-items: center; gap: 8px; justify-content: flex-end; white-space: nowrap; }
 .frac { font-family: var(--mono); font-size: 9.5px; color: var(--fg-faint); min-width: 34px; text-align: right; }
@@ -301,6 +317,213 @@ body {
   color: var(--fg-tertiary);
 }
 .drain-foot .esc { margin-left: auto; }
+
+/* ---- the sheet: the editor ---- */
+
+/*
+ * It unfolds in the shelf's own flow. Not a region, not an overlay, not a tab.
+ * Full width, because the 2-column split was rejected twice: it halves the
+ * width until the pips stop fitting, and it is the shape that produced v1's
+ * five panels.
+ */
+.ed {
+  background: var(--chrome);
+  border-bottom: 1px solid var(--border-strong);
+  border-left: 2px solid var(--accent);
+}
+.ed.dead { border-left-color: var(--death); }
+
+.ed-h {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 4px 10px 4px 12px;
+  background: color-mix(in srgb, var(--week) 10%, var(--bg));
+  border-bottom: 1px solid color-mix(in srgb, var(--week) 25%, var(--bg));
+}
+.ed-kind {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--page);
+  background: var(--week);
+  padding: 1px 4px;
+  font-weight: 700;
+}
+.ed-kind.proj { background: #c08ad0; }
+.ed-crumb { font-family: var(--mono); font-size: 9.5px; color: var(--fg-tertiary); }
+/* The only persistence surface. There is no unsaved state, so none is drawn. */
+.ed-saved { font-family: var(--mono); font-size: 9px; color: var(--fg-tertiary); margin-left: auto; }
+.ed-close { font-family: var(--mono); font-size: 9.5px; color: var(--fg-faint); border: 1px solid var(--border-strong); padding: 0 5px; background: var(--raised); cursor: pointer; }
+
+.ed-title { display: flex; align-items: center; gap: 10px; padding: 9px 12px 8px; border-bottom: 1px solid var(--border); }
+.ed-title-in {
+  flex: 1;
+  min-width: 0;
+  background: var(--vscode-input-background, #161616);
+  border: 1px solid var(--border-strong);
+  padding: 4px 8px;
+  font-family: var(--ui);
+  font-size: 14px;
+  color: var(--vscode-input-foreground, #e8e8e8);
+}
+.ed-title-in:focus { border-color: var(--accent); outline: 1px solid var(--accent); outline-offset: -2px; }
+.ed-nostatus { font-family: var(--mono); font-size: 9px; color: var(--fg-tertiary); white-space: nowrap; }
+
+.ed-status { display: flex; border: 1px solid var(--border-strong); flex: 0 0 auto; }
+.ed-status span {
+  font-family: var(--mono);
+  font-size: 10px;
+  background: var(--raised);
+  color: var(--fg-faint);
+  padding: 3px 9px;
+  border-right: 1px solid var(--border-strong);
+  letter-spacing: .04em;
+  cursor: pointer;
+}
+.ed-status span:last-child { border-right: 0; }
+.ed-status span.on { background: var(--accent); color: var(--accent-fg); }
+.ed-status span.on.dn { background: color-mix(in srgb, var(--ok) 40%, var(--bg)); color: var(--fg); }
+
+/*
+ * The computed block. Read-only, labelled, never a control.
+ * Mono says: this is derived, and there is no field for you to change it.
+ */
+.ed-sig {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 12px;
+  background: color-mix(in srgb, var(--week) 12%, var(--bg));
+  border-bottom: 1px solid color-mix(in srgb, var(--week) 30%, var(--bg));
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: color-mix(in srgb, var(--week) 75%, var(--fg));
+  flex-wrap: wrap;
+}
+.ed-sig .lbl {
+  font-size: 8.5px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--page);
+  background: var(--week);
+  padding: 1px 4px;
+  font-weight: 700;
+}
+.ed-sig .val { font-size: 11px; color: color-mix(in srgb, var(--danger) 60%, var(--fg)); font-weight: 700; }
+.ed-sig .val.q { color: var(--fg-tertiary); font-weight: 400; }
+.ed-sig .why { color: var(--fg-dim); }
+.ed-sig .ro { margin-left: auto; color: var(--fg-tertiary); font-size: 9px; white-space: nowrap; }
+
+/* Single column. Milestones and Project.status died; the surface shrank. */
+.ed-fields { display: flex; flex-direction: column; }
+.fs { border-bottom: 1px solid var(--border); padding: 7px 12px 9px; }
+.fs:last-child { border-bottom: 0; }
+.fs-h { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; }
+.fs-n { font-family: var(--mono); font-size: 9px; letter-spacing: .09em; text-transform: uppercase; color: var(--fg-faint); }
+.fs-w { font-family: var(--mono); font-size: 9px; color: var(--fg-tertiary); }
+.fs-a { margin-left: auto; display: flex; gap: 4px; }
+
+.inp {
+  background: var(--vscode-input-background, #161616);
+  border: 1px solid var(--border-strong);
+  padding: 3px 7px;
+  font-family: var(--ui);
+  font-size: 12px;
+  color: var(--vscode-input-foreground, #dcdcdc);
+  width: 100%;
+  display: block;
+}
+.inp:focus { border-color: var(--accent); outline: none; }
+.inp.mono { font-family: var(--mono); font-size: 11px; width: auto; min-width: 140px; }
+.inp.multi { min-height: 44px; line-height: 1.5; resize: vertical; }
+.btn.ghost { background: transparent; border-style: dashed; color: var(--fg-tertiary); }
+
+/* commit — the only real judgment he authors */
+.commit { border: 1px solid var(--week); background: color-mix(in srgb, var(--week) 12%, var(--bg)); padding: 6px 9px; display: flex; align-items: center; gap: 9px; }
+.commit-q { font-size: 12px; color: var(--week); }
+.commit-q b { color: var(--fg); font-weight: 600; }
+.commit-t { display: flex; border: 1px solid var(--week); margin-left: auto; }
+.commit-t span { font-family: var(--mono); font-size: 10px; background: color-mix(in srgb, var(--week) 18%, var(--bg)); color: var(--fg-dim); padding: 1.5px 9px; border-right: 1px solid var(--week); cursor: pointer; }
+.commit-t span:last-child { border-right: 0; }
+.commit-t span.on { background: var(--week); color: var(--page); font-weight: 700; }
+
+/* subtasks — flat, one level */
+.sub-l { display: flex; flex-direction: column; }
+.st { display: flex; align-items: center; gap: 8px; padding: 2.5px 5px; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, var(--bg)); font-size: 12px; }
+.st .box { font-family: var(--mono); font-size: 11px; color: var(--fg-tertiary); width: 12px; flex: 0 0 12px; cursor: pointer; }
+.st .box.on { color: var(--ok); }
+.st.dn .lb-in { color: var(--fg-tertiary); text-decoration: line-through; }
+.st .x, .sh .x { font-family: var(--mono); font-size: 9px; color: var(--border-strong); cursor: pointer; }
+.st .x:hover, .sh .x:hover { color: var(--danger); }
+.lb-in, .ph-in, .tag-in {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  color: var(--fg);
+  font-family: var(--ui);
+  font-size: 12px;
+  padding: 0;
+}
+.lb-in:focus, .ph-in:focus, .tag-in:focus { outline: none; }
+.st-add { display: flex; align-items: center; gap: 8px; padding: 3px 5px; margin-top: 2px; border: 1px dashed var(--border-strong); background: var(--surface); }
+.st-add .box { font-family: var(--mono); font-size: 11px; color: var(--border-strong); width: 12px; flex: 0 0 12px; }
+.st-add .kbd { font-family: var(--mono); font-size: 8.5px; color: var(--fg-tertiary); border: 1px solid var(--border-strong); padding: 0 3px; }
+
+/* stakeholders — direction is half of urgency */
+.sh-l { display: flex; flex-direction: column; }
+.sh { display: flex; align-items: center; gap: 8px; padding: 3px 5px; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, var(--bg)); font-size: 12px; }
+.sh-n { color: var(--fg); flex: 0 0 auto; min-width: 58px; }
+.dir { display: flex; border: 1px solid var(--border-strong); margin-left: auto; }
+.dir span { font-family: var(--mono); font-size: 9px; background: var(--raised); color: var(--fg-tertiary); padding: 1px 6px; border-right: 1px solid var(--border-strong); white-space: nowrap; cursor: pointer; }
+.dir span:last-child { border-right: 0; }
+.dir span.on.up { background: color-mix(in srgb, var(--dir-up) 25%, var(--bg)); color: var(--dir-up); }
+.dir span.on.dn { background: color-mix(in srgb, var(--dir-down) 25%, var(--bg)); color: var(--dir-down); }
+
+/* tags — for find. Nothing computes from these. */
+.tags { display: flex; gap: 3px; flex-wrap: wrap; align-items: center; }
+.tag { font-family: var(--mono); font-size: 9.5px; border: 1px solid var(--border-strong); color: var(--fg-dim); background: var(--hover); padding: 0 5px; white-space: nowrap; }
+.tag .x { color: var(--fg-tertiary); margin-left: 4px; cursor: pointer; }
+.tag-in { font-family: var(--mono); font-size: 9.5px; border: 1px dashed var(--border-strong); color: var(--fg-dim); padding: 0 5px; flex: 0 0 90px; }
+
+/* log — the eventDate is auto-stamped AND editable */
+.log-add { display: flex; align-items: stretch; border: 1px solid var(--accent); background: var(--vscode-input-background, #161616); margin-bottom: 6px; }
+.log-add .date { font-family: var(--mono); font-size: 10px; color: var(--week); background: color-mix(in srgb, var(--week) 12%, var(--bg)); padding: 4px 7px; border: 0; border-right: 1px solid color-mix(in srgb, var(--week) 30%, var(--bg)); }
+.log-add .txt { flex: 1; padding: 4px 7px; font-size: 12px; color: var(--fg); background: transparent; border: 0; }
+.log-add .txt:focus, .log-add .date:focus { outline: none; }
+.log-add .kbd { font-family: var(--mono); font-size: 8.5px; color: var(--fg-tertiary); border-left: 1px solid var(--border-strong); padding: 0 6px; display: flex; align-items: center; white-space: nowrap; background: var(--chrome); }
+.log-l { display: flex; flex-direction: column; }
+.lg { display: grid; grid-template-columns: 110px 1fr; gap: 9px; padding: 4px 5px; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, var(--bg)); align-items: baseline; }
+/* Dotted = auto-stamped, and correctable. */
+.lg-d { font-family: var(--mono); font-size: 9.5px; color: var(--fg-faint); background: transparent; border: 0; border-bottom: 1px dotted var(--border-strong); padding: 0; }
+.lg-d:focus { outline: none; border-bottom-color: var(--accent); }
+.lg-t { font-size: 12px; color: var(--fg-dim); line-height: 1.5; }
+
+/*
+ * The rail. An empty field is a chore; a rail is an offer.
+ * This is why a bare task reads as finished rather than as unfinished data entry.
+ */
+.depth { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--surface); border-top: 1px solid var(--border); flex-wrap: wrap; }
+.depth-l { font-family: var(--mono); font-size: 9px; color: var(--fg-tertiary); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+.depth-b { font-family: var(--mono); font-size: 10px; background: transparent; border: 1px dashed var(--border-strong); color: var(--fg-faint); padding: 1.5px 7px; white-space: nowrap; cursor: pointer; }
+.depth-b:hover { border-color: var(--accent-2); color: var(--fg); }
+.depth-b .k { color: var(--fg-tertiary); margin-left: 5px; font-size: 8.5px; }
+.depth-b.die { border-color: color-mix(in srgb, var(--death) 60%, var(--bg)); color: color-mix(in srgb, var(--death) 55%, var(--fg)); }
+.depth-b.die:hover { border-color: var(--death); }
+
+/* death — purple, never red. An ending, not a failure. */
+.die { display: none; align-items: center; gap: 9px; padding: 6px 12px; background: color-mix(in srgb, var(--death) 10%, var(--bg)); border-top: 1px solid color-mix(in srgb, var(--death) 35%, var(--bg)); }
+.die.open { display: flex; }
+.die-q { font-family: var(--mono); font-size: 9.5px; color: color-mix(in srgb, var(--death) 55%, var(--fg)); }
+.why { display: flex; gap: 3px; flex-wrap: wrap; }
+.why span { font-family: var(--mono); font-size: 9px; border: 1px solid color-mix(in srgb, var(--death) 50%, var(--bg)); color: #c08ad0; background: color-mix(in srgb, var(--death) 15%, var(--bg)); padding: 1px 5px; cursor: pointer; }
+.why span.on { background: var(--death); color: #f0e4f4; }
+.die-note { font-family: var(--mono); font-size: 8.5px; color: var(--fg-tertiary); margin-left: auto; }
+
+/* ＋ project — same rail language as the editor's */
+.shelf-rail { padding: 8px 12px; }
 
 /* ---- kanban ---- */
 

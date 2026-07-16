@@ -1,6 +1,6 @@
 import type { BandKind } from "../derive/bands.ts";
 import type { UrgencySignal } from "../derive/urgency.ts";
-import type { CaptureId, ProjectId, TaskId } from "./types.ts";
+import type { CaptureId, ProjectId, StakeholderId, TaskId } from "./types.ts";
 
 /**
  * The one postMessage envelope. Shared by both sides — this file is the reason
@@ -63,10 +63,64 @@ export interface BacklogVm {
   /** The drain is a SUB-STATE of backlog, never a sibling mode. */
   drain: DrainVm | null;
   /**
+   * The editor. A SHEET that unfolds in the shelf's own flow — not a region,
+   * not an overlay, not a tab. The 2-column split was rejected: halving the
+   * width stops the pips fitting, and it is the shape that produced v1's five
+   * panels.
+   */
+  sheet: SheetVm | null;
+  /**
    * Rendered in mono, so it is a computed fact. Platform-resolved — the chords
    * differ per OS, and `derive/` cannot reach `vscode` to know which.
    */
   captureChord: string;
+}
+
+/**
+ * What is on the sheet. Fields are ABSENT until asked for — an empty field is a
+ * chore, a rail is an offer. That is why a bare task reads as finished.
+ */
+export type SheetField =
+  | "deadline"
+  | "description"
+  | "subtasks"
+  | "log"
+  | "stakeholders"
+  | "tags"
+  | "commit";
+
+export interface RailItem {
+  field: SheetField;
+  label: string;
+  /** Platform-resolved in `surface/`, rendered in mono. */
+  chord: string;
+}
+
+export interface SheetVm {
+  kind: "task" | "project";
+  id: TaskId | ProjectId;
+  title: string;
+  /** `COMEX workshop › build the deck` for a task; `18 tasks` for a project. */
+  crumb: string;
+  /** A task's status. A project has none — a project isn't a task. */
+  status: "todo" | "doing" | "done" | null;
+  /** Read-only, labelled `computed`. NEVER a control. */
+  signal: SignalVm;
+  /** Why the signal says what it says, in prose. Also read-only. */
+  signalWhy: string;
+  /** Present only when the field is on. `null` means the rail still offers it. */
+  deadline: string | null;
+  description: string | null;
+  subtasks: { text: string; done: boolean }[] | null;
+  log: { eventDate: string; message: string }[] | null;
+  stakeholders: { id: StakeholderId; name: string; direction: "up" | "down" }[] | null;
+  tags: string[] | null;
+  /** The only real judgment he authors. `weekOf` when committed. */
+  commit: { weekOf: string; isThisWeek: boolean } | null;
+  /** What is NOT on it yet — depth on demand. */
+  rail: RailItem[];
+  /** A task can die. So can a project. Both carry a reason. */
+  death: { reason: string; at: string } | null;
 }
 
 export interface DrainVm {
@@ -130,4 +184,46 @@ export type WebviewMessage =
   | { type: "commit"; id: TaskId }
   | { type: "uncommit"; id: TaskId }
   | { type: "openReport" }
-  | { type: "pull"; id: TaskId };
+  | { type: "pull"; id: TaskId }
+  /* ---- the sheet ---- */
+  | { type: "openSheet"; kind: "task" | "project"; id: TaskId | ProjectId }
+  | { type: "closeSheet" }
+  | { type: "newProject" }
+  /**
+   * A task born ON a strip, with a project from birth.
+   *
+   * Capture-resolution is the OTHER way a task is born, and it was the only one
+   * — which made the drain the sole road onto the shelf. But capture is the 2s
+   * interrupt; deliberately adding work to a project you are looking at is a
+   * different gesture, and routing it through the inbox would make him capture a
+   * thing he already knows the home of.
+   */
+  | { type: "newTask"; project: ProjectId }
+  /**
+   * Saves as you type. `⌘S` is not a thing, there is no dirty state, and there
+   * is no save button anywhere in any editor. Text input debounces in the
+   * webview (AD-14) — it is the one place the webview leads.
+   */
+  | { type: "setTitle"; value: string }
+  | { type: "setDescription"; value: string }
+  | { type: "setDeadline"; value: string | null }
+  | { type: "setSheetStatus"; status: "todo" | "doing" | "done" }
+  /** Adds the field to the sheet. The rail is an offer; this accepts it. */
+  | { type: "addField"; field: SheetField }
+  | { type: "removeField"; field: SheetField }
+  | { type: "addSubtask"; text: string }
+  | { type: "setSubtaskText"; index: number; text: string }
+  | { type: "toggleSubtask"; index: number }
+  | { type: "removeSubtask"; index: number }
+  /** `eventDate` is auto-stamped AND editable — an auto-stamp he cannot correct is a lie in the record. */
+  | { type: "addLog"; message: string; eventDate: string }
+  | { type: "setLogDate"; index: number; eventDate: string }
+  | { type: "addStakeholder"; name: string; direction: "up" | "down" }
+  | { type: "setDirection"; id: StakeholderId; direction: "up" | "down" }
+  | { type: "removeStakeholder"; id: StakeholderId }
+  | { type: "addTag"; tag: string }
+  | { type: "removeTag"; tag: string }
+  | { type: "setCommit"; weekOf: string | null }
+  /** Death is a distinct ending from done. The reason is required and authored. */
+  | { type: "letItDie"; reason: "outdated" | "delegated" | "cancelled" }
+  | { type: "undie" };

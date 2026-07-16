@@ -13,6 +13,7 @@ import type {
 } from "../model/protocol.ts";
 import type { Day, Dataset, Task, Week } from "../model/types.ts";
 import { ruleBar, shelf } from "./bands.ts";
+import { projectSheet, taskSheet, type ChordMap } from "./sheet.ts";
 import { idleDays, isBlocked, isOpen, urgencyOf, type UrgencySignal } from "./urgency.ts";
 
 /**
@@ -29,11 +30,14 @@ export interface UiState {
   drainOpen: boolean;
   root: string;
   rootKind: "local" | "configured" | "home";
+  /** Which sheet is unfolded, if any. UI state — never persisted. */
+  open: { kind: "task" | "project"; id: string } | null;
   /**
    * Passed in, never derived. Chords are platform-specific and live in
    * `surface/` — this layer cannot import `vscode` to find out (AD-3).
    */
   captureChord: string;
+  chords: ChordMap;
 }
 
 const STALE_DAYS = 14;
@@ -77,12 +81,24 @@ function whoVm(task: Task[], data: Dataset): StripVm["who"] {
   return null;
 }
 
+const DEFAULT_CHORDS: ChordMap = {
+  deadline: "Ctrl+D",
+  subtasks: "Ctrl+Shift+S",
+  log: "Ctrl+L",
+  stakeholders: "Ctrl+Shift+P",
+  tags: "Ctrl+T",
+  commit: "Ctrl+W",
+  die: "Ctrl+Backspace",
+};
+
 export function backlogVm(
   data: Dataset,
   now: Day,
   week: Week,
   drainOpen: boolean,
   captureChord = "Ctrl+Alt+L",
+  open: UiState["open"] = null,
+  chords: ChordMap = DEFAULT_CHORDS,
 ): BacklogVm {
   const bands = shelf(data, now);
   const unsorted = data.captures.filter((c) => c.state === "unsorted");
@@ -122,10 +138,22 @@ export function backlogVm(
   const shownProjects = vm.reduce((n, b) => n + b.strips.length, 0);
   const totalProjects = data.projects.length;
 
+  let sheet: BacklogVm["sheet"] = null;
+  if (open) {
+    if (open.kind === "task") {
+      const t = data.tasks.find((x) => x.id === open.id);
+      if (t) sheet = taskSheet(t, data, now, week, chords);
+    } else {
+      const p = data.projects.find((x) => x.id === open.id);
+      if (p) sheet = projectSheet(p, data, now, chords);
+    }
+  }
+
   return {
     bands: vm,
     rule: ruleBar(shownProjects, totalProjects, "they have living work"),
     captureChord,
+    sheet,
     drain: drainOpen
       ? {
           captures: unsorted.map((c) => ({
@@ -274,7 +302,7 @@ export function buildViewModel(
     rootKind: ui.rootKind,
     backlog:
       ui.mode === "backlog"
-        ? backlogVm(data, now, week, ui.drainOpen, ui.captureChord)
+        ? backlogVm(data, now, week, ui.drainOpen, ui.captureChord, ui.open, ui.chords)
         : null,
     kanban: ui.mode === "kanban" ? kanbanVm(data, now, week) : null,
     report: ui.mode === "report" ? reportVm(data, now, week, reportPath) : null,

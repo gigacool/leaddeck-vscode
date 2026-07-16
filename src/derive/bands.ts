@@ -1,5 +1,5 @@
 import { daysBetween, toDay } from "../model/dates.ts";
-import type { Day, Dataset, Project, Task } from "../model/types.ts";
+import { INBOX_PROJECT_ID, type Day, type Dataset, type Project, type Task } from "../model/types.ts";
 import { isOpen, urgencyOf, urgencyRank, type UrgencySignal } from "./urgency.ts";
 
 /**
@@ -125,7 +125,13 @@ export function shelf(data: Dataset, now: Day): Band[] {
 
   for (const project of data.projects) {
     const tasks = data.tasks.filter((t) => t.project === project.id);
-    if (tasks.length === 0) continue;
+
+    // An empty project is DRAWN, not dropped — but only if he made it. A bare
+    // project is a finished project, and a project that vanishes the instant it
+    // is created is a dead end: you cannot add a task to a strip that is not on
+    // the shelf. Inbox is the one exception: it is machinery, not a decision, so
+    // it appears only when it holds something.
+    if (tasks.length === 0 && project.id === INBOX_PROJECT_ID) continue;
 
     const signal = stripSignal(tasks, data, now);
     const strip: ProjectStrip = {

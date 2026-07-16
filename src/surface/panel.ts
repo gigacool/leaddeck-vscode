@@ -1,8 +1,45 @@
 import * as vscode from "vscode";
+import type { ChordMap } from "../derive/sheet.ts";
 import { buildViewModel, type UiState } from "../derive/viewmodel.ts";
 import { toDay, toWeek } from "../model/dates.ts";
 import type { HostMessage, Mode, WebviewMessage } from "../model/protocol.ts";
 import type { Store } from "../store/store.ts";
+import { applyEdit } from "./edit.ts";
+
+/**
+ * The rail's chord hints, resolved per platform.
+ *
+ * EXPERIENCE.md writes every chord in Mac notation, but on Windows those map to
+ * chords VS Code already owns: Ctrl+W closes the editor, Ctrl+L expands the
+ * selection, Ctrl+F opens find. `⌘W` for "commit to a week" is the worst case —
+ * it would close the window.
+ *
+ * These are HINTS ONLY today: the rail's buttons are clickable, and no
+ * `contributes.keybindings` entry binds them yet. Printing a chord that does
+ * nothing is a lie, so the Windows set below is what will be bound — chosen to
+ * avoid the collisions rather than to mirror the Mac notation.
+ */
+function chordsFor(platform: NodeJS.Platform): ChordMap {
+  return platform === "darwin"
+    ? {
+        deadline: "⌘D",
+        subtasks: "⌘⇧S",
+        log: "⌘L",
+        stakeholders: "⌘⇧P",
+        tags: "⌘T",
+        commit: "⌘W",
+        die: "⌘⌫",
+      }
+    : {
+        deadline: "Alt+D",
+        subtasks: "Alt+S",
+        log: "Alt+L",
+        stakeholders: "Alt+P",
+        tags: "Alt+T",
+        commit: "Alt+W",
+        die: "Alt+Backspace",
+      };
+}
 
 /**
  * The ONE webview.
@@ -63,12 +100,14 @@ export class Workbench {
     const wb = new Workbench(panel, store, {
       mode: "backlog",
       drainOpen: false,
+      open: null,
       root: store.root,
       rootKind,
       // Platform-resolved here, because only this layer knows the platform.
       // EXPERIENCE.md writes every chord in Mac notation; Cédric is on Windows,
       // where Ctrl+F / Ctrl+W / Ctrl+L are already VS Code's.
       captureChord: process.platform === "darwin" ? "⌘⌥L" : "Ctrl+Alt+L",
+      chords: chordsFor(process.platform),
     }, reportDir);
     panel.webview.html = wb.#html(ctx);
     Workbench.current = wb;
@@ -169,7 +208,95 @@ export class Workbench {
       case "pull":
         await this.#pull(m.id, now);
         return;
+
+      case "openSheet":
+        this.#ui = { ...this.#ui, open: { kind: m.kind, id: m.id } };
+        this.render();
+        return;
+
+      case "closeSheet":
+        // Esc closes; nothing is lost, because nothing was ever unsaved.
+        this.#ui = { ...this.#ui, open: null };
+        this.render();
+        return;
+
+      case "newProject":
+        await this.#newProject();
+        this.render();
+        return;
+
+      case "newTask":
+        await this.#newTask(m.project, now);
+        this.render();
+        return;
+
+      default: {
+        // Every remaining message is a sheet edit. Saves as you type.
+        const open = this.#ui.open;
+        if (!open) return;
+        await applyEdit(this.#store, open, m, now);
+        this.render();
+        return;
+      }
     }
+  }
+
+  /**
+   * A bare project is a finished project. No name prompt, no wizard, no
+   * required fields — it is born empty and the sheet opens on its title.
+   */
+  async #newProject(): Promise<void> {
+    const { newProjectId } = await import("../model/ids.ts");
+    const id = newProjectId();
+    await this.#store.mutate((d) => {
+      d.projects.push({
+        id,
+        title: "Untitled project",
+        description: "",
+        deadline: null,
+        stakeholders: [],
+        tags: [],
+        logMessages: [],
+      });
+      return { touched: ["projects"] };
+    });
+    this.#ui = { ...this.#ui, open: { kind: "project", id } };
+  }
+
+  /**
+   * A bare task is a finished task — same law as `＋ project`, one level down.
+   *
+   * It is born with a project, which is the whole difference from a capture: no
+   * inbox, no drain, no "what is this?" — he is looking at the strip, so the
+   * answer is already on screen.
+   */
+  async #newTask(project: string, now: Date): Promise<void> {
+    const { newTaskId } = await import("../model/ids.ts");
+    const id = newTaskId();
+    await this.#store.mutate((d) => {
+      if (!d.projects.some((p) => p.id === project)) return { touched: [] };
+      d.tasks.push({
+        id,
+        title: "",
+        description: "",
+        project: project as never,
+        deadline: null,
+        status: "todo",
+        subtasks: [],
+        logMessages: [],
+        stakeholders: [],
+        tags: [],
+        committed: null,
+        // A stamp, not a computation (AD-4).
+        todoSince: toDay(now),
+        doneAt: null,
+        death: null,
+      });
+      return { touched: ["tasks"] };
+    });
+    // The sheet opens on it, focused on the title — an untitled task is not a
+    // thing he must go find and name later.
+    this.#ui = { ...this.#ui, open: { kind: "task", id } };
   }
 
   async #resolveCapture(

@@ -5,12 +5,24 @@ import type { UiState } from "../src/derive/viewmodel.ts";
 import { aCapture, aProject, aStakeholder, aTask, dataset, daysAgo, daysAhead, NOW } from "./fixtures.ts";
 
 const WEEK = "2026-W29";
+const CHORDS = {
+  deadline: "Alt+D",
+  subtasks: "Alt+S",
+  log: "Alt+L",
+  stakeholders: "Alt+P",
+  tags: "Alt+T",
+  commit: "Alt+W",
+  die: "Alt+Backspace",
+};
+
 const ui = (over: Partial<UiState> = {}): UiState => ({
   mode: "backlog",
   drainOpen: false,
+  open: null,
   root: "/home/cedric/LeadDeck",
   rootKind: "home",
   captureChord: "Ctrl+Alt+L",
+  chords: CHORDS,
   ...over,
 });
 

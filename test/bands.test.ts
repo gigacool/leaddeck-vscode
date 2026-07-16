@@ -128,10 +128,35 @@ test("every band states its predicate — nothing is on screen unexplained", () 
   }
 });
 
-test("a project with no tasks does not render — no empty strips", () => {
+/*
+ * This test asserted the OPPOSITE until 2026-07-16, and that assertion was the
+ * dead end: `＋ project` made a project the shelf then refused to draw, and a
+ * strip you cannot see is a strip you cannot add a task to. Every road led back
+ * to the drain.
+ *
+ * Nothing ever decided empty projects should hide. FR-9 says "render EVERY
+ * project as a strip", and the spine is silent — it was an assumption that
+ * reached the test file wearing a law's clothes.
+ */
+test("a project with no tasks RENDERS — a bare project is a finished project", () => {
   const p = aProject();
   const d = dataset({ projects: [...dataset().projects, p] });
-  assert.equal(shelf(d, NOW).length, 0);
+  const bands = shelf(d, NOW);
+  assert.equal(bands.length, 1);
+  assert.equal(bands[0]!.def.kind, "quiet");
+  assert.equal(bands[0]!.strips[0]!.project.id, p.id);
+  // It reads quiet, not urgent: there is nothing to compute urgency from.
+  assert.equal(bands[0]!.strips[0]!.signal.kind, "quiet");
+  assert.equal(bands[0]!.strips[0]!.total, 0);
+});
+
+/*
+ * Inbox is the ONE exception, and for a reason that does not generalise: it is
+ * machinery, not a decision he made. An always-present empty Inbox strip would
+ * be a permanent 0/0 row he never chose.
+ */
+test("the empty Inbox does NOT render — it is machinery, not a project", () => {
+  assert.equal(shelf(dataset(), NOW).length, 0);
 });
 
 test("the strip's fraction counts done over living tasks — dead ones are not failures", () => {
