@@ -103,6 +103,48 @@ export function pickNoteTarget(data: Dataset, seed: string): Promise<NoteTarget 
   });
 }
 
+/**
+ * "Which project is this task's home?" — asked when a capture resolves to a
+ * task (B3). Projects only (a task lives in a project, never in another task),
+ * Inbox included and first, so the fast path stays one keystroke. Returns the
+ * chosen project id, or null on Esc — the host then defaults to the Inbox.
+ *
+ * A plain project list is small enough that VS Code's native filter is right;
+ * `collide` earns its place when tasks and projects compete in one list, not
+ * here.
+ */
+export function pickProject(data: Dataset, seed: string): Promise<string | null> {
+  interface P extends vscode.QuickPickItem {
+    id: string;
+  }
+  return new Promise((resolve) => {
+    const qp = vscode.window.createQuickPick<P>();
+    qp.title = seed;
+    qp.placeholder = "which project? (Esc → Inbox)";
+    // Inbox first — it is the default home, and the one he reaches for most.
+    const inbox = data.projects.find((p) => p.id === "pj_inbox");
+    const rest = data.projects.filter((p) => p.id !== "pj_inbox");
+    qp.items = [
+      ...(inbox ? [{ label: "$(inbox) Inbox", id: inbox.id }] : []),
+      ...rest.map((p) => ({ label: `$(folder) ${p.title}`, id: p.id })),
+    ];
+
+    let done = false;
+    qp.onDidAccept(() => {
+      const picked = qp.selectedItems[0];
+      if (!picked) return;
+      done = true;
+      qp.hide();
+      resolve(picked.id);
+    });
+    qp.onDidHide(() => {
+      qp.dispose();
+      if (!done) resolve(null); // Esc → the host uses the Inbox
+    });
+    qp.show();
+  });
+}
+
 function signalText(h: Collision): string {
   const s = h.signal;
   if (!s) return "";

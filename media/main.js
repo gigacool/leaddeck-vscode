@@ -507,24 +507,31 @@
   function kanbanEl(k) {
     const kb = el("div", "kb");
     for (const col of k.columns) {
-      const c = el("div", "kb-col");
+      const computed = col.key === "blocked";
+      const c = el("div", `kb-col${computed ? " computed" : ""}`);
       const h = el("div", "kb-col-h");
       h.append(el("span", void 0, col.label), el("b", void 0, String(col.cards.length)));
+      if (computed) h.append(el("span", "kb-computed", "computed \xB7 depends on a person"));
       c.append(h);
       const list = el("div", "kb-list scroll");
       for (const card of col.cards) list.append(cardEl(card));
       c.append(list);
       c.ondragover = (e) => {
         e.preventDefault();
+        if (computed) {
+          if (e.dataTransfer) e.dataTransfer.dropEffect = "none";
+          c.classList.add("no-drop");
+          return;
+        }
         c.classList.add("over");
       };
-      c.ondragleave = () => c.classList.remove("over");
+      c.ondragleave = () => c.classList.remove("over", "no-drop");
       c.ondrop = (e) => {
         e.preventDefault();
-        c.classList.remove("over");
+        c.classList.remove("over", "no-drop");
         const id = e.dataTransfer?.getData("text/plain");
         if (!id) return;
-        if (col.key === "blocked") return;
+        if (computed) return;
         const status = col.key === "done" ? "done" : col.key === "doing" ? "doing" : "todo";
         post({ type: "setStatus", id, status });
       };

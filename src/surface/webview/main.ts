@@ -715,9 +715,15 @@ function cardEl(c: CardVm): HTMLElement {
 function kanbanEl(k: KanbanVm): HTMLElement {
   const kb = el("div", "kb");
   for (const col of k.columns) {
-    const c = el("div", "kb-col");
+    // `blocked` is DERIVED, not a status you set — a task is blocked when a
+    // person owes it a move (FR-12). Dropping onto it silently did nothing,
+    // which read as a broken column. Now the column SAYS it is computed and
+    // shows it won't accept a drop, so the refusal is understood, not a bug.
+    const computed = col.key === "blocked";
+    const c = el("div", `kb-col${computed ? " computed" : ""}`);
     const h = el("div", "kb-col-h");
     h.append(el("span", undefined, col.label), el("b", undefined, String(col.cards.length)));
+    if (computed) h.append(el("span", "kb-computed", "computed · depends on a person"));
     c.append(h);
 
     const list = el("div", "kb-list scroll");
@@ -728,15 +734,22 @@ function kanbanEl(k: KanbanVm): HTMLElement {
     // workflow may assume it.
     c.ondragover = (e) => {
       e.preventDefault();
+      // A computed column cannot be a drop target — show the "no" cursor and
+      // don't light up as droppable, so the refusal is visible mid-drag.
+      if (computed) {
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "none";
+        c.classList.add("no-drop");
+        return;
+      }
       c.classList.add("over");
     };
-    c.ondragleave = () => c.classList.remove("over");
+    c.ondragleave = () => c.classList.remove("over", "no-drop");
     c.ondrop = (e) => {
       e.preventDefault();
-      c.classList.remove("over");
+      c.classList.remove("over", "no-drop");
       const id = e.dataTransfer?.getData("text/plain");
       if (!id) return;
-      if (col.key === "blocked") return; // blocked is DERIVED — you cannot drag into it.
+      if (computed) return; // blocked is DERIVED — you cannot drag into it.
       const status = col.key === "done" ? "done" : col.key === "doing" ? "doing" : "todo";
       post({ type: "setStatus", id: id as never, status });
     };

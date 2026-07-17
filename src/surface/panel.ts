@@ -434,7 +434,6 @@ export class Workbench {
     now: Date,
   ): Promise<void> {
     const { newTaskId } = await import("../model/ids.ts");
-    const { INBOX_PROJECT_ID } = await import("../model/types.ts");
 
     /*
      * FR-8's note destinations. The picker runs BEFORE the mutation, because it
@@ -448,6 +447,18 @@ export class Workbench {
       const { pickNoteTarget } = await import("./pick.ts");
       target = await pickNoteTarget(this.#store.data, capture.text);
       if (!target) return; // Esc — the capture stays unsorted. Leaving it is fine.
+    }
+
+    // B3 — a capture becoming a task chooses its home. The picker runs before
+    // the mutation (Esc must not consume the capture); Esc, or no pick, defaults
+    // to the Inbox — the fast path stays one keystroke.
+    let taskProject: string = INBOX_PROJECT_ID;
+    if (m.to === "task") {
+      const capture = this.#store.data.captures.find((x) => x.id === m.id);
+      if (!capture) return;
+      const { pickProject } = await import("./pick.ts");
+      const picked = await pickProject(this.#store.data, capture.text);
+      if (picked !== null) taskProject = picked;
     }
 
     await this.#store.mutate((d) => {
@@ -478,6 +489,12 @@ export class Workbench {
         return { touched: ["projects", "captures"] };
       }
 
+      // The chosen home must still exist (it was picked a moment ago, but be
+      // safe against a concurrent delete). Fall back to the Inbox, never orphan.
+      const project = (
+        d.projects.some((p) => p.id === taskProject) ? taskProject : INBOX_PROJECT_ID
+      ) as ProjectId;
+
       // AD-13: the task is CREATED before the capture is CONSUMED. A crash
       // between the two leaves an orphan, never a void.
       const id = newTaskId();
@@ -485,7 +502,7 @@ export class Workbench {
         id,
         title: c.text,
         description: "",
-        project: INBOX_PROJECT_ID,
+        project,
         deadline: null,
         status: "todo",
         subtasks: [],
