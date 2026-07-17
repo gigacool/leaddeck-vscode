@@ -45,7 +45,66 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
     }),
     captureCommand(store, () => workbench?.onExternalChange()),
     watch(root),
+    ...statusBar(),
+    vscode.window.registerWebviewViewProvider("leaddeck.launcher", new LauncherView()),
   );
+}
+
+/**
+ * Two status-bar buttons — a permanent, always-visible way in that fits a
+ * way of working the command palette does not. They only LAUNCH the commands;
+ * the workbench is still an editor webview (it cannot live in the status bar),
+ * and capture is still the native QuickPick.
+ */
+function statusBar(): vscode.Disposable[] {
+  const capture = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+  capture.text = "$(zap) Capture";
+  capture.tooltip = "LeadDeck: capture a thought (Ctrl+Alt+L)";
+  capture.command = "leaddeck.capture";
+  capture.show();
+
+  const open = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 99);
+  open.text = "$(checklist) LeadDeck";
+  open.tooltip = "LeadDeck: open the workbench (Ctrl+Alt+K)";
+  open.command = "leaddeck.open";
+  open.show();
+
+  return [capture, open];
+}
+
+/**
+ * The Activity Bar entry. An activity-bar icon CANNOT open an editor webview
+ * directly (that is why the workbench is a command), so this is a tiny sidebar
+ * view whose two buttons run the same commands. It is the discoverable front
+ * door; the keybindings and status bar remain the fast paths.
+ */
+class LauncherView implements vscode.WebviewViewProvider {
+  resolveWebviewView(view: vscode.WebviewView): void {
+    view.webview.options = { enableScripts: true };
+    view.webview.html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>
+  body { padding: 10px 8px; font-family: var(--vscode-font-family); color: var(--vscode-foreground); }
+  button { display: block; width: 100%; text-align: left; margin: 0 0 6px; padding: 6px 10px;
+    background: var(--vscode-button-secondaryBackground, #3a3d41); color: var(--vscode-button-secondaryForeground, #fff);
+    border: none; border-radius: 2px; cursor: pointer; font-size: 13px; }
+  button.pri { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
+  button:hover { filter: brightness(1.1); }
+  .hint { color: var(--vscode-descriptionForeground); font-size: 11px; margin: 2px 2px 10px; }
+</style></head><body>
+  <button class="pri" onclick="go('leaddeck.open')">▸ Open workbench</button>
+  <button onclick="go('leaddeck.capture')">⚡ Capture a thought</button>
+  <div class="hint">Ctrl+Alt+K · Ctrl+Alt+L</div>
+  <script>
+    const vscode = acquireVsCodeApi();
+    function go(cmd) { vscode.postMessage({ cmd }); }
+  </script>
+</body></html>`;
+    view.webview.onDidReceiveMessage((m: { cmd?: string }) => {
+      if (m.cmd === "leaddeck.open" || m.cmd === "leaddeck.capture") {
+        void vscode.commands.executeCommand(m.cmd);
+      }
+    });
+  }
 }
 
 /**

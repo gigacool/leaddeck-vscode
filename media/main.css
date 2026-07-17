@@ -217,6 +217,17 @@ body {
 
 /* ---- shelf ---- */
 
+/* The backlog: a fixed action bar over a scrolling shelf. */
+.backlog { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.shelf-bar {
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--border-strong);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .shelf { flex: 1; display: flex; flex-direction: column; background: var(--surface); min-height: 0; }
 
 .band { border-bottom: 1px solid var(--border-strong); }
@@ -689,9 +700,6 @@ body {
 .why span { font-family: var(--mono); font-size: var(--fs-xs); border: 1px solid color-mix(in srgb, var(--death) 50%, var(--bg)); color: #c08ad0; background: color-mix(in srgb, var(--death) 15%, var(--bg)); padding: 1px 5px; cursor: pointer; }
 .why span.on { background: var(--death); color: #f0e4f4; }
 .die-note { font-family: var(--mono); font-size: var(--fs-xs); color: var(--fg-tertiary); margin-left: auto; }
-
-/* ＋ project — same rail language as the editor's */
-.shelf-rail { padding: 8px 12px; }
 
 /* ---- kanban ---- */
 

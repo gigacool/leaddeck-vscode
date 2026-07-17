@@ -657,6 +657,18 @@ function debounce(fn: () => void, ms: number): () => void {
 }
 
 function backlogEl(b: BacklogVm): HTMLElement {
+  // The backlog is a fixed action bar over a scrolling shelf. `＋ project` lives
+  // in the bar at the TOP (Cédric's call — creating is a top-of-list gesture),
+  // and stays visible while the shelf scrolls beneath it.
+  const wrap = el("div", "backlog");
+
+  const bar = el("div", "shelf-bar");
+  const add = el("button", "depth-b", "＋ project");
+  add.title = "add a project";
+  add.onclick = () => post({ type: "newProject" });
+  bar.append(add);
+  wrap.append(bar);
+
   const shelf = el("div", `shelf scroll${b.drain ? " draining" : ""}`);
   // `bandEl` places the sheet under its own strip. Track whether any band
   // claimed it, so a sheet that matches no row still reaches the screen.
@@ -687,19 +699,13 @@ function backlogEl(b: BacklogVm): HTMLElement {
       el(
         "div",
         "empty",
-        `no projects, no tasks, nothing captured — ${b.captureChord} to capture, or ＋ project below`,
+        `no projects, no tasks, nothing captured — ${b.captureChord} to capture, or ＋ project above`,
       ),
     );
   }
 
-  // A bare project is a finished project. Same rail language as the editor's.
-  const newRail = el("div", "shelf-rail");
-  const add = el("button", "depth-b", "＋ project");
-  add.onclick = () => post({ type: "newProject" });
-  newRail.append(add);
-  shelf.append(newRail);
-
-  return shelf;
+  wrap.append(shelf);
+  return wrap;
 }
 
 function cardEl(c: CardVm): HTMLElement {

@@ -470,6 +470,13 @@
     };
   }
   function backlogEl(b) {
+    const wrap = el("div", "backlog");
+    const bar = el("div", "shelf-bar");
+    const add = el("button", "depth-b", "\uFF0B project");
+    add.title = "add a project";
+    add.onclick = () => post({ type: "newProject" });
+    bar.append(add);
+    wrap.append(bar);
     const shelf = el("div", `shelf scroll${b.drain ? " draining" : ""}`);
     const claimed = b.sheet !== null && b.bands.some(
       (band) => band.strips.some((s) => s.id === b.sheet.id || s.pips.some((p) => p.id === b.sheet.id))
@@ -485,16 +492,12 @@
         el(
           "div",
           "empty",
-          `no projects, no tasks, nothing captured \u2014 ${b.captureChord} to capture, or \uFF0B project below`
+          `no projects, no tasks, nothing captured \u2014 ${b.captureChord} to capture, or \uFF0B project above`
         )
       );
     }
-    const newRail = el("div", "shelf-rail");
-    const add = el("button", "depth-b", "\uFF0B project");
-    add.onclick = () => post({ type: "newProject" });
-    newRail.append(add);
-    shelf.append(newRail);
-    return shelf;
+    wrap.append(shelf);
+    return wrap;
   }
   function cardEl(c) {
     const t = el("div", `t ${c.tone}${c.done ? " done" : ""}`);

@@ -22,6 +22,24 @@
     "check": "pnpm run typecheck && pnpm run test"
   },
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "leaddeck",
+          "title": "LeadDeck",
+          "icon": "media/activity.svg"
+        }
+      ]
+    },
+    "views": {
+      "leaddeck": [
+        {
+          "id": "leaddeck.launcher",
+          "name": "LeadDeck",
+          "type": "webview"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "leaddeck.capture",
