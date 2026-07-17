@@ -707,11 +707,14 @@ body {
 .tag-in { font-family: var(--mono); font-size: var(--fs-xs); border: 1px dashed var(--border-strong); color: var(--fg-dim); padding: 0 5px; flex: 0 0 90px; }
 
 /* log — the eventDate is auto-stamped AND editable */
-.log-add { display: flex; align-items: stretch; border: 1px solid var(--accent); background: var(--vscode-input-background, #161616); margin-bottom: 6px; }
-.log-add .date { font-family: var(--mono); font-size: var(--fs-sm); color: var(--week); background: color-mix(in srgb, var(--week) 12%, var(--bg)); padding: 4px 7px; border: 0; border-right: 1px solid color-mix(in srgb, var(--week) 30%, var(--bg)); }
-.log-add .txt { flex: 1; padding: 4px 7px; font-size: var(--fs-md); color: var(--fg); background: transparent; border: 0; }
+/* Wraps rather than overflowing: in the narrow right-hand log column the
+   date input and the ⏎ hint used to push past the edge. Now the row wraps and
+   the date input can shrink. */
+.log-add { display: flex; flex-wrap: wrap; align-items: stretch; border: 1px solid var(--accent); background: var(--vscode-input-background, #161616); margin-bottom: 6px; }
+.log-add .date { font-family: var(--mono); font-size: var(--fs-sm); color: var(--week); background: color-mix(in srgb, var(--week) 12%, var(--bg)); padding: 4px 7px; border: 0; border-right: 1px solid color-mix(in srgb, var(--week) 30%, var(--bg)); min-width: 0; flex: 0 1 auto; }
+.log-add .txt { flex: 1 1 90px; min-width: 0; padding: 4px 7px; font-size: var(--fs-md); color: var(--fg); background: transparent; border: 0; }
 .log-add .txt:focus, .log-add .date:focus { outline: none; }
-.log-add .kbd { font-family: var(--mono); font-size: var(--fs-xs); color: var(--fg-tertiary); border-left: 1px solid var(--border-strong); padding: 0 6px; display: flex; align-items: center; white-space: nowrap; background: var(--chrome); }
+.log-add .kbd { font-family: var(--mono); font-size: var(--fs-xs); color: var(--fg-tertiary); border-left: 1px solid var(--border-strong); padding: 0 6px; display: flex; align-items: center; white-space: nowrap; background: var(--chrome); flex: 0 0 auto; }
 .log-l { display: flex; flex-direction: column; }
 .lg { display: grid; grid-template-columns: 110px 1fr; gap: 9px; padding: 4px 5px; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, var(--bg)); align-items: baseline; }
 /* Dotted = auto-stamped, and correctable. */
