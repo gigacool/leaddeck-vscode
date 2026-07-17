@@ -173,6 +173,11 @@ function stateGlyph(state: string): string {
  */
 function stripTasksEl(s: StripVm): HTMLElement {
   const list = el("div", "strip-tasks");
+  // A SINGLE inner wrapper between the grid and the rows: the `0fr → 1fr`
+  // collapse only works on one grid child. With the rows as direct children,
+  // each became its own `auto` track and kept its height at rest — the residual
+  // band Cédric saw. One wrapper, one collapsible track.
+  const inner = el("div", "st-inner");
   for (const p of s.pips) {
     const item = el("div", `st-row ${p.state}`);
 
@@ -199,8 +204,9 @@ function stripTasksEl(s: StripVm): HTMLElement {
     }
 
     item.append(title, commit);
-    list.append(item);
+    inner.append(item);
   }
+  list.append(inner);
   return list;
 }
 

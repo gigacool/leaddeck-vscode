@@ -91,6 +91,7 @@
   }
   function stripTasksEl(s) {
     const list = el("div", "strip-tasks");
+    const inner = el("div", "st-inner");
     for (const p of s.pips) {
       const item = el("div", `st-row ${p.state}`);
       const title = el("button", "st-title");
@@ -112,8 +113,9 @@
         commit.onclick = () => post({ type: "commit", id: p.id });
       }
       item.append(title, commit);
-      list.append(item);
+      inner.append(item);
     }
+    list.append(inner);
     return list;
   }
   function bandEl(b, sheet) {

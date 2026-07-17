@@ -307,21 +307,19 @@ body {
 .strip-wrap .strip { border-bottom: 0; } /* the wrapper owns the divider now */
 
 /*
- * Collapsed at rest — density is the feature, so nothing shows until he asks by
- * hovering. Not display:none: a grid-rows transition keeps the unfold calm
- * instead of a jump, and hidden rows stay out of the tab order via visibility.
+ * Collapsed to ZERO height at rest — density is the feature, so nothing shows,
+ * and nothing reserves space, until he hovers. The `0fr → 1fr` grid-row unfold
+ * needs exactly ONE collapsible child (.st-inner) with overflow:hidden and
+ * min-height:0; the rows live inside it. `visibility` was the earlier mistake —
+ * it hid the rows but kept their box, leaving the residual band.
  */
 .strip-tasks {
   display: grid; grid-template-rows: 0fr;
   transition: grid-template-rows .12s ease;
   background: color-mix(in srgb, var(--chrome) 60%, var(--bg));
 }
-/* min-height:0 is load-bearing: a grid row of `0fr` still grows to fit a child
-   with intrinsic height unless the child is allowed to shrink to nothing. Its
-   absence is exactly why the list showed at rest instead of collapsed. */
-.strip-tasks > * { overflow: hidden; min-height: 0; visibility: hidden; }
+.st-inner { overflow: hidden; min-height: 0; }
 .strip-wrap:hover .strip-tasks { grid-template-rows: 1fr; }
-.strip-wrap:hover .strip-tasks > * { visibility: visible; }
 
 .st-row {
   display: flex; align-items: center; gap: 8px;
