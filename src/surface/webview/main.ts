@@ -735,12 +735,16 @@ function backlogEl(b: BacklogVm): HTMLElement {
   wrap.append(bar);
 
   const shelf = el("div", `shelf scroll${b.drain ? " draining" : ""}`);
-  // `bandEl` places the sheet under its own strip. Track whether any band
-  // claimed it, so a sheet that matches no row still reaches the screen.
+  // `bandEl` places the sheet under its own strip — but a FOLDED band (archived)
+  // draws no strips, so a sheet whose project lives there is never placed. Only
+  // a DRAWN band can claim it; otherwise the fallback below must catch it, or
+  // opening an archived project's sheet shows nothing at all.
   const claimed =
     b.sheet !== null &&
-    b.bands.some((band) =>
-      band.strips.some((s) => s.id === b.sheet!.id || s.pips.some((p) => p.id === b.sheet!.id)),
+    b.bands.some(
+      (band) =>
+        !band.folded &&
+        band.strips.some((s) => s.id === b.sheet!.id || s.pips.some((p) => p.id === b.sheet!.id)),
     );
   for (const band of b.bands) {
     shelf.append(bandEl(band, claimed ? b.sheet : null));

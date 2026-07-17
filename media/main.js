@@ -527,7 +527,7 @@
     wrap.append(bar);
     const shelf = el("div", `shelf scroll${b.drain ? " draining" : ""}`);
     const claimed = b.sheet !== null && b.bands.some(
-      (band) => band.strips.some((s) => s.id === b.sheet.id || s.pips.some((p) => p.id === b.sheet.id))
+      (band) => !band.folded && band.strips.some((s) => s.id === b.sheet.id || s.pips.some((p) => p.id === b.sheet.id))
     );
     for (const band of b.bands) {
       shelf.append(bandEl(band, claimed ? b.sheet : null));
