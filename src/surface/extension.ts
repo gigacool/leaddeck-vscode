@@ -90,39 +90,37 @@ function statusBar(): vscode.Disposable[] {
 class LauncherView implements vscode.WebviewViewProvider {
   resolveWebviewView(view: vscode.WebviewView): void {
     view.webview.options = { enableScripts: true };
+    // Styled after the Source Control view: NO background of its own — it
+    // inherits the side-bar's, so it never reads as an aggressive black block.
+    // Grey intro copy, then full-width centred buttons like "Initialize
+    // Repository". Nothing here sets a body background.
     view.webview.html = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
   :root { color-scheme: light dark; }
-  body { margin: 0; padding: 12px 12px 8px; font-family: var(--vscode-font-family); font-size: 13px; color: var(--vscode-foreground); }
-  .act {
-    display: flex; align-items: center; gap: 9px; width: 100%;
-    text-align: left; margin: 0 0 8px; padding: 8px 11px;
-    background: var(--vscode-button-secondaryBackground, #313131);
-    color: var(--vscode-button-secondaryForeground, #ccc);
-    border: 1px solid transparent; border-radius: 4px; cursor: pointer; font: inherit;
+  body { margin: 0; padding: 14px 16px; font-family: var(--vscode-font-family); font-size: 13px; line-height: 1.5; color: var(--vscode-foreground); background: transparent; }
+  p { margin: 0 0 14px; color: var(--vscode-descriptionForeground); }
+  .btn {
+    display: block; width: 100%; text-align: center;
+    margin: 0 0 16px; padding: 5px 12px;
+    background: var(--vscode-button-background); color: var(--vscode-button-foreground);
+    border: 1px solid var(--vscode-button-border, transparent); border-radius: 2px;
+    cursor: pointer; font: inherit;
   }
-  .act.pri { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
-  .act:hover { background: var(--vscode-button-secondaryHoverBackground, #3c3c3c); }
-  .act.pri:hover { background: var(--vscode-button-hoverBackground); }
-  .act:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 1px; }
-  .ico { font-size: 15px; line-height: 1; width: 16px; text-align: center; flex: 0 0 auto; }
-  .lbl { flex: 1; }
-  .kbd { font-family: var(--vscode-editor-font-family, monospace); font-size: 10px; opacity: .7; white-space: nowrap; }
-  .sep { height: 1px; background: var(--vscode-widget-border, #454545); margin: 4px 0 12px; opacity: .5; }
+  .btn:hover { background: var(--vscode-button-hoverBackground); }
+  .btn:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 2px; }
+  .kbd { font-family: var(--vscode-editor-font-family, monospace); font-size: 11px; opacity: .7; }
 </style></head><body>
-  <button class="act pri" onclick="go('leaddeck.open')">
-    <span class="ico">▤</span><span class="lbl">Open workbench</span><span class="kbd" id="k-open"></span>
-  </button>
-  <button class="act" onclick="go('leaddeck.capture')">
-    <span class="ico">⚡</span><span class="lbl">Capture a thought</span><span class="kbd" id="k-cap"></span>
-  </button>
-  <div class="sep"></div>
+  <p>Your board, and quick capture. Open the workbench to see projects, the week, and the report.</p>
+  <button class="btn" onclick="go('leaddeck.open')">Open workbench</button>
+  <p>Jot a thought without leaving what you're doing — it lands unsorted for you to file later.</p>
+  <button class="btn" onclick="go('leaddeck.capture')">Capture a thought</button>
+  <p><span class="kbd" id="k-open"></span> · <span class="kbd" id="k-cap"></span></p>
   <script>
     const vscode = acquireVsCodeApi();
     function go(cmd) { vscode.postMessage({ cmd }); }
     const mac = navigator.platform.toLowerCase().includes('mac');
-    document.getElementById('k-open').textContent = mac ? '⌘⌥O' : 'Ctrl+Alt+O';
-    document.getElementById('k-cap').textContent = mac ? '⌘⌥L' : 'Ctrl+Alt+L';
+    document.getElementById('k-open').textContent = mac ? '⌘⌥O open' : 'Ctrl+Alt+O open';
+    document.getElementById('k-cap').textContent = mac ? '⌘⌥L capture' : 'Ctrl+Alt+L capture';
   </script>
 </body></html>`;
     view.webview.onDidReceiveMessage((m: { cmd?: string }) => {
