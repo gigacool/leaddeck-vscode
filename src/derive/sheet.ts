@@ -38,6 +38,18 @@ const RAIL: { field: SheetField; label: string; chord: keyof ChordMap }[] = [
 /** A project is not a task: no status, no subtasks, no commitment, no log. */
 const PROJECT_FIELDS: SheetField[] = ["deadline", "description", "stakeholders", "tags"];
 
+/** Every field a task can carry, in rail order. Used by "show all". */
+const TASK_FIELDS: SheetField[] = RAIL.map((r) => r.field);
+
+/**
+ * SHOW ALL — Cédric's call after the first real use. Depth-on-demand hid the
+ * fields behind the rail, which meant hunting for attributes and a layout that
+ * differed task to task. Showing every field (empty if unset) trades a little
+ * height for a predictable, identical sheet every time. Flip to false to
+ * restore the rail.
+ */
+const SHOW_ALL = true;
+
 function signalVm(s: UrgencySignal): SignalVm {
   switch (s.kind) {
     case "overdue":
@@ -104,13 +116,16 @@ export function taskSheet(
   // their intent in `asked` instead. It is the same question ("is this on?"),
   // not a second model of it.
   const present: SheetField[] = [];
-  if (task.deadline !== null) present.push("deadline");
-  if (task.description.length > 0) present.push("description");
-  if (task.subtasks.length > 0) present.push("subtasks");
-  if (task.logMessages.length > 0 || asked.includes("log")) present.push("log");
-  if (task.stakeholders.length > 0 || asked.includes("stakeholders")) present.push("stakeholders");
-  if (task.tags.length > 0 || asked.includes("tags")) present.push("tags");
-  if (task.committed !== null) present.push("commit");
+  if (SHOW_ALL) present.push(...TASK_FIELDS);
+  else {
+    if (task.deadline !== null) present.push("deadline");
+    if (task.description.length > 0) present.push("description");
+    if (task.subtasks.length > 0) present.push("subtasks");
+    if (task.logMessages.length > 0 || asked.includes("log")) present.push("log");
+    if (task.stakeholders.length > 0 || asked.includes("stakeholders")) present.push("stakeholders");
+    if (task.tags.length > 0 || asked.includes("tags")) present.push("tags");
+    if (task.committed !== null) present.push("commit");
+  }
 
   return {
     kind: "task",
@@ -135,12 +150,15 @@ export function taskSheet(
     commit: task.committed
       ? { weekOf: task.committed.weekOf, isThisWeek: task.committed.weekOf === week }
       : null,
+    fields: present,
     // `log` is repeatable, so it stays on the rail even once present.
-    rail: railFor(
-      present.filter((f) => f !== "log"),
-      RAIL.map((r) => r.field),
-      chords,
-    ),
+    rail: SHOW_ALL
+      ? []
+      : railFor(
+          present.filter((f) => f !== "log"),
+          TASK_FIELDS,
+          chords,
+        ),
     death: task.death,
   };
 }
@@ -171,10 +189,13 @@ export function projectSheet(
   }
 
   const present: SheetField[] = [];
-  if (project.deadline !== null) present.push("deadline");
-  if (project.description.length > 0) present.push("description");
-  if (project.stakeholders.length > 0 || asked.includes("stakeholders")) present.push("stakeholders");
-  if (project.tags.length > 0 || asked.includes("tags")) present.push("tags");
+  if (SHOW_ALL) present.push(...PROJECT_FIELDS);
+  else {
+    if (project.deadline !== null) present.push("deadline");
+    if (project.description.length > 0) present.push("description");
+    if (project.stakeholders.length > 0 || asked.includes("stakeholders")) present.push("stakeholders");
+    if (project.tags.length > 0 || asked.includes("tags")) present.push("tags");
+  }
 
   const n = tasks.length;
   return {
@@ -201,7 +222,8 @@ export function projectSheet(
       : null,
     tags: present.includes("tags") ? project.tags : null,
     commit: null,
-    rail: railFor(present, PROJECT_FIELDS, chords),
+    fields: present,
+    rail: SHOW_ALL ? [] : railFor(present, PROJECT_FIELDS, chords),
     death: null,
   };
 }

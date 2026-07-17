@@ -371,18 +371,24 @@ function sheetEl(s: SheetVm): HTMLElement {
   ed.append(sig);
 
   const body = el("div", "ed-fields");
+  // A field shows when it is in `s.fields` — with "show all" that is every field
+  // the kind allows, whether or not it holds a value. Its VALUE may still be
+  // null, which now means "empty", and each field renders its own empty state.
+  const has = (f: string): boolean => s.fields.includes(f as never);
 
-  if (s.deadline !== null) {
+  if (has("deadline")) {
     body.append(
-      field("deadline", dateInput(s.deadline, (v) => post({ type: "setDeadline", value: v })), () =>
-        post({ type: "removeField", field: "deadline" }),
+      field(
+        "deadline",
+        dateInput(s.deadline ?? "", (v) => post({ type: "setDeadline", value: v })),
+        () => post({ type: "removeField", field: "deadline" }),
       ),
     );
   }
 
-  if (s.description !== null) {
+  if (has("description")) {
     const ta = el("textarea", "inp multi") as HTMLTextAreaElement;
-    ta.value = s.description.trim();
+    ta.value = (s.description ?? "").trim();
     ta.rows = 2;
     ta.spellcheck = false;
     ta.dataset["focus"] = "description";
@@ -390,28 +396,37 @@ function sheetEl(s: SheetVm): HTMLElement {
     body.append(field("description", ta, () => post({ type: "removeField", field: "description" })));
   }
 
-  if (s.commit !== null) {
+  if (has("commit")) {
     const wrap = el("div", "commit");
-    const q = el("span", "commit-q");
-    q.append(document.createTextNode("In "), el("b", undefined, s.commit.weekOf), document.createTextNode("?"));
-    wrap.append(q);
-    const t = el("span", "commit-t");
-    const yes = el("span", "on", "yes");
-    const no = el("span", undefined, "no");
-    no.onclick = () => post({ type: "setCommit", weekOf: null });
-    t.append(yes, no);
-    wrap.append(t);
+    if (s.commit !== null) {
+      const q = el("span", "commit-q");
+      q.append(document.createTextNode("In "), el("b", undefined, s.commit.weekOf), document.createTextNode("?"));
+      wrap.append(q);
+      const t = el("span", "commit-t");
+      const yes = el("span", "on", "yes");
+      const no = el("span", undefined, "no");
+      no.onclick = () => post({ type: "setCommit", weekOf: null });
+      t.append(yes, no);
+      wrap.append(t);
+    } else {
+      // Not committed yet — the empty state is the offer to commit to this week.
+      const commit = el("span", "commit-t");
+      const go = el("span", "on", "commit to this week");
+      go.onclick = () => post({ type: "commit", id: s.id as never });
+      commit.append(go);
+      wrap.append(commit);
+    }
     body.append(field("the week", wrap, null, "the only judgment you author"));
   }
 
-  if (s.subtasks !== null) body.append(subtasksEl(s.subtasks));
-  if (s.stakeholders !== null) body.append(stakeholdersEl(s.stakeholders));
-  if (s.tags !== null) body.append(tagsEl(s.tags));
-  if (s.log !== null) body.append(logEl(s.log));
+  if (has("subtasks")) body.append(subtasksEl(s.subtasks ?? []));
+  if (has("stakeholders")) body.append(stakeholdersEl(s.stakeholders ?? []));
+  if (has("tags")) body.append(tagsEl(s.tags ?? []));
+  if (has("log")) body.append(logEl(s.log ?? []));
 
   ed.append(body);
 
-  // the rail: depth on demand
+  // the rail: depth on demand (empty when the sheet shows all fields)
   if (s.rail.length > 0) {
     const rail = el("div", "depth");
     rail.append(el("span", "depth-l", "add when you need it"));
@@ -421,16 +436,21 @@ function sheetEl(s: SheetVm): HTMLElement {
       b.onclick = () => post({ type: "addField", field: r.field });
       rail.append(b);
     }
-    if (s.kind === "task" && !s.death) {
-      const die = el("button", "depth-b die");
-      die.append(document.createTextNode("⊗ let it die"));
-      die.onclick = () => {
-        const w = ed.querySelector(".die");
-        w?.classList.toggle("open");
-      };
-      rail.append(die);
-    }
     ed.append(rail);
+  }
+
+  // "let it die" lives with the sheet, not the rail — with show-all the rail is
+  // empty, and ending a task must not vanish with it.
+  if (s.kind === "task" && !s.death) {
+    const dieBar = el("div", "die-bar");
+    const die = el("button", "depth-b die");
+    die.append(document.createTextNode("⊗ let it die"));
+    die.onclick = () => {
+      const w = ed.querySelector(".die");
+      w?.classList.toggle("open");
+    };
+    dieBar.append(die);
+    ed.append(dieBar);
   }
 
   // death: purple, never red. An ending, not a failure.

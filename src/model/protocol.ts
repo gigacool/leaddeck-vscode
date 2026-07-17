@@ -118,7 +118,15 @@ export interface SheetVm {
   tags: string[] | null;
   /** The only real judgment he authors. `weekOf` when committed. */
   commit: { weekOf: string; isThisWeek: boolean } | null;
-  /** What is NOT on it yet — depth on demand. */
+  /**
+   * Which fields the sheet SHOWS, regardless of whether they hold a value. When
+   * "show all" is on (Cédric's call — depth-on-demand was more chore than
+   * offer), this is every field the kind allows, so the layout is identical
+   * from one task to the next. A field shown but empty renders its empty state;
+   * `null` in the value fields above then means "empty", not "hidden".
+   */
+  fields: SheetField[];
+  /** What is NOT shown yet — empty when the sheet shows all fields. */
   rail: RailItem[];
   /** A task can die. So can a project. Both carry a reason. */
   death: { reason: string; at: string } | null;

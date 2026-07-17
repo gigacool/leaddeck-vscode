@@ -28,25 +28,41 @@ const CHORDS: ChordMap = {
 const sheetOf = (task: Parameters<typeof taskSheet>[0], data = dataset({ tasks: [task] })) =>
   taskSheet(task, data, NOW, WEEK, CHORDS);
 
-/* ---- FR-24: a bare task is a finished task ---- */
+/* ---- SHOW ALL: depth-on-demand retired (Cédric's call, 2026-07-17) ---- */
 
-test("FR-24 — a bare task has NO fields; every one of them is on the rail", () => {
+test("SHOW-ALL — a task sheet shows EVERY field, and the rail is empty", () => {
+  // The reversal of depth-on-demand: hunting for attributes behind the rail,
+  // and a layout that differed task to task, was more chore than offer. Now the
+  // sheet is identical every time — every field present, empty ones included.
   const s = sheetOf(aTask());
-
-  // Not one empty field. `null` is the sheet saying "the rail still offers it".
-  assert.equal(s.deadline, null);
-  assert.equal(s.description, null);
-  assert.equal(s.subtasks, null);
-  assert.equal(s.log, null);
-  assert.equal(s.stakeholders, null);
-  assert.equal(s.tags, null);
-  assert.equal(s.commit, null);
-
-  // And each is offered, rather than simply gone.
-  const offered = s.rail.map((r) => r.field);
   for (const f of ["deadline", "description", "subtasks", "log", "stakeholders", "tags", "commit"]) {
-    assert.ok(offered.includes(f as never), `the rail does not offer ${f}`);
+    assert.ok(s.fields.includes(f as never), `the sheet does not show ${f}`);
   }
+  assert.deepEqual(s.rail, []); // nothing left to offer — it is all shown
+});
+
+test("SHOW-ALL — a project shows its four fields, and no task-only ones", () => {
+  const p = aProject();
+  const s = projectSheet(p, dataset({ projects: [p] }), NOW, CHORDS);
+  assert.deepEqual(s.fields.sort(), ["deadline", "description", "stakeholders", "tags"]);
+  // A project is not a task: never a status, subtasks, log, or commitment.
+  for (const f of ["subtasks", "log", "commit"]) assert.ok(!s.fields.includes(f as never));
+  assert.deepEqual(s.rail, []);
+});
+
+test("SHOW-ALL — an empty field shows but stays empty in the values", () => {
+  // Shown does not mean invented: a bare task's fields are all present in
+  // `fields`, but their VALUES are the empty/null state, not fabricated data.
+  const s = sheetOf(aTask());
+  assert.equal(s.deadline, null); // shown as an empty date, not a made-up one
+  assert.deepEqual(s.tags, []); // shown as an empty tag row, no tags invented
+  assert.equal(s.commit, null); // shown as "commit to this week?", not committed
+});
+
+test("SHOW-ALL — a filled field carries its value, same as before", () => {
+  const s = sheetOf(aTask({ deadline: daysAhead(3), tags: ["ops"] }));
+  assert.equal(s.deadline, daysAhead(3));
+  assert.deepEqual(s.tags, ["ops"]);
 });
 
 test("FR-24 — a bare task reads QUIET, and says there is nothing to compute from", () => {
@@ -56,74 +72,6 @@ test("FR-24 — a bare task reads QUIET, and says there is nothing to compute fr
   // The no-priority law, said out loud. A bare task must not read as an
   // omission he still owes the tool.
   assert.match(s.signalWhy, /nothing to compute urgency from/);
-});
-
-/* ---- FR-25: depth on demand ---- */
-
-test("FR-25 — a field that is ON leaves the rail; the offer is spent", () => {
-  const s = sheetOf(aTask({ deadline: daysAhead(3) }));
-  assert.equal(s.deadline, daysAhead(3));
-  assert.ok(!s.rail.some((r) => r.field === "deadline"));
-});
-
-test("FR-25 — `log` is the ONE field that stays on the rail once present", () => {
-  // Every other field is a thing you have or don't. A log is a list you keep
-  // adding to, so spending its offer would strand him after the first note.
-  const s = sheetOf(aTask({ logMessages: [{ eventDate: NOW, message: "sarah pinged" }] }));
-  assert.equal(s.log?.length, 1);
-  assert.ok(s.rail.some((r) => r.field === "log"));
-});
-
-/*
- * THE INERT RAIL — found in the first real run, invisible to every test.
- *
- * `＋ tag` / `＋ stakeholder` / `＋ log note` write NOTHING when clicked: an
- * empty tag is not a tag, and a nameless stakeholder is not a person. So
- * presence-from-stored-data alone left them absent, the repaint was identical,
- * and three of the seven rail buttons did nothing at all.
- *
- * `asked` carries the intent. It is the same question ("is this field on?"),
- * answered by data where data can answer it and by intent where it cannot.
- */
-test("＋ tag OPENS the tag row — the rail button is not inert", () => {
-  const bare = sheetOf(aTask());
-  assert.equal(bare.tags, null); // not asked, not present
-
-  const asked = taskSheet(aTask(), dataset(), NOW, WEEK, CHORDS, ["tags"]);
-  assert.deepEqual(asked.tags, []); // asked: an EMPTY row, ready to type into
-  assert.ok(!asked.rail.some((r) => r.field === "tags")); // the offer is spent
-});
-
-test("＋ stakeholder opens an empty row without inventing a person", () => {
-  const asked = taskSheet(aTask(), dataset(), NOW, WEEK, CHORDS, ["stakeholders"]);
-  assert.deepEqual(asked.stakeholders, []);
-  // Crucially: asking did NOT create a stakeholder. AD-5 — no id from a name.
-  assert.equal(asked.signal.kind, "quiet");
-});
-
-test("＋ log note opens the add-line, and log STAYS on the rail", () => {
-  const asked = taskSheet(aTask(), dataset(), NOW, WEEK, CHORDS, ["log"]);
-  assert.deepEqual(asked.log, []);
-  assert.ok(asked.rail.some((r) => r.field === "log"));
-});
-
-test("asked is intent, not data: a project's rail opens the same way", () => {
-  const p = aProject();
-  const s = projectSheet(p, dataset({ projects: [p] }), NOW, CHORDS, ["tags"]);
-  assert.deepEqual(s.tags, []);
-});
-
-test("FR-25 — the rail carries a platform-resolved chord, never a Mac glyph on Windows", () => {
-  // `derive/` cannot reach `vscode` to know the platform, so the chord is passed
-  // in. Printing ⌘W on Windows would be a lie — and ⌘W is *close the window*.
-  const s = sheetOf(aTask());
-  assert.equal(s.rail.find((r) => r.field === "deadline")?.chord, "Alt+D");
-  for (const r of s.rail) assert.ok(r.chord.length > 0, `${r.field} has no chord`);
-});
-
-test("FR-25 — the rail's ORDER is deliberate: deadline first", () => {
-  const s = sheetOf(aTask());
-  assert.equal(s.rail[0]?.field, "deadline");
 });
 
 /* ---- FR-28: computed signals are read-only ---- */

@@ -611,6 +611,8 @@ body {
  * This is why a bare task reads as finished rather than as unfinished data entry.
  */
 .depth { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--surface); border-top: 1px solid var(--border); flex-wrap: wrap; }
+/* "let it die", on its own row now that the rail can be empty (show-all). */
+.die-bar { display: flex; padding: 6px 12px; background: var(--surface); border-top: 1px solid var(--border); }
 .depth-l { font-family: var(--mono); font-size: 9px; color: var(--fg-tertiary); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
 /*
  * --fg-faint is VS Code's *disabled* foreground. The rail is the whole depth-
