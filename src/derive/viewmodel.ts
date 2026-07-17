@@ -163,6 +163,11 @@ export function backlogVm(
       title: s.project.title,
       pips: s.tasks
         .filter((t) => t.death === null)
+        // Open work first, finished work last (Cédric's call). NOT manual
+        // priority — the order is COMPUTED from `done`, a stable partition, not
+        // a sequence he drags. `done ? 1 : 0` keeps each group's own order.
+        .slice()
+        .sort((a, b) => (a.status === "done" ? 1 : 0) - (b.status === "done" ? 1 : 0))
         .map((t): PipVm => ({
           id: t.id,
           title: t.title,

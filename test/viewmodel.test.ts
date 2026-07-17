@@ -103,6 +103,28 @@ test("a capture resolved to a task becomes VISIBLE — the first-run bug", () =>
   assert.equal(pips[0]!.title, "comex deck — Q3 numbers");
 });
 
+test("open work sorts before finished work in a strip — computed, not dragged", () => {
+  // Cédric asked for done tasks to sit below the open ones. This is a partition
+  // by `status`, not a manual order — a stable sort, so within each group the
+  // shelf's own order is kept. It is NOT priority coming back.
+  const p = aProject();
+  const d = dataset({
+    projects: [...dataset().projects, p],
+    tasks: [
+      aTask({ project: p.id, title: "done A", status: "done", doneAt: "2026-07-15T10:00:00.000Z" }),
+      aTask({ project: p.id, title: "open B", status: "todo" }),
+      aTask({ project: p.id, title: "done C", status: "done", doneAt: "2026-07-15T11:00:00.000Z" }),
+      aTask({ project: p.id, title: "open D", status: "doing" }),
+    ],
+  });
+  const strip = backlogVm(d, NOW, WEEK, false).bands
+    .flatMap((b) => b.strips)
+    .find((s) => s.id === p.id)!;
+  const titles = strip.pips.map((pip) => pip.title);
+  // Open first (B, D in their original order), then done (A, C in theirs).
+  assert.deepEqual(titles, ["open B", "open D", "done A", "done C"]);
+});
+
 test("the rule bar counts the Inbox strip too — the denominator must not lie", () => {
   const p = aProject();
   const d = dataset({

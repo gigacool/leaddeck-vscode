@@ -326,6 +326,11 @@ export class Workbench {
         return;
       }
 
+      case "moveTask":
+        await this.#moveTask(m.id, m.project);
+        this.render();
+        return;
+
       case "openSheet":
         // `asked` is per-sheet intent and dies with it: `＋ tag` on one task
         // must not open a blank tag row on the next one he clicks.
@@ -596,6 +601,19 @@ export class Workbench {
       const t = d.tasks.find((x) => x.id === id);
       if (!t) return { touched: [] };
       t.committed = weekOf === null ? null : { weekOf };
+      return { touched: ["tasks"] };
+    });
+  }
+
+  /** Re-home a task to another project (its only drag). No re-order. */
+  async #moveTask(id: string, project: string): Promise<void> {
+    await this.#store.mutate((d) => {
+      const t = d.tasks.find((x) => x.id === id);
+      // The target must exist, and a no-op move writes nothing.
+      if (!t || t.project === project || !d.projects.some((p) => p.id === project)) {
+        return { touched: [] };
+      }
+      t.project = project as ProjectId;
       return { touched: ["tasks"] };
     });
   }

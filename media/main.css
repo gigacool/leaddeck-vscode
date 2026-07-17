@@ -396,8 +396,12 @@ body {
   padding: 3px 10px 3px 36px; /* indent under the project name */
   font-size: var(--fs-sm);
   border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, var(--bg));
+  cursor: grab;
 }
 .st-row:hover { background: var(--hover); }
+.st-row.dragging { opacity: .4; }
+/* A project lit up as a drop target while a task is dragged over it. */
+.strip-wrap.drop-here { outline: 2px solid var(--accent); outline-offset: -2px; background: color-mix(in srgb, var(--accent) 10%, var(--bg)); }
 .st-title {
   flex: 1; min-width: 0; text-align: left; background: 0; border: 0; cursor: pointer;
   color: var(--fg); font: inherit;

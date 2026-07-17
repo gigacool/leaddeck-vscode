@@ -279,6 +279,12 @@ export type WebviewMessage =
    */
   | { type: "newTask"; project: ProjectId }
   /**
+   * Move a task to another project — its only drag. Changes the parent, never
+   * the order: re-ordering WITHIN a project would be manual priority, the
+   * concept the design removed first. Dropping a task on a strip re-homes it.
+   */
+  | { type: "moveTask"; id: TaskId; project: ProjectId }
+  /**
    * Saves as you type. `⌘S` is not a thing, there is no dirty state, and there
    * is no save button anywhere in any editor. Text input debounces in the
    * webview (AD-14) — it is the one place the webview leads.

@@ -105,6 +105,26 @@ function stripEl(s: StripVm): HTMLElement {
   // ✎ button, so the primary click is the one he asked for.
   const wrap = el("div", `strip-wrap${s.open ? " open" : ""}`);
 
+  // A drop target: a task dragged from another project lands here and is
+  // re-homed. Only the leaddeck-task type is accepted, so kanban cards and text
+  // do nothing. A no-op onto its own project is filtered host-side.
+  wrap.ondragover = (e) => {
+    if (!e.dataTransfer?.types.includes("application/x-leaddeck-task")) return;
+    e.preventDefault();
+    wrap.classList.add("drop-here");
+  };
+  wrap.ondragleave = (e) => {
+    // Only clear when the cursor actually left the wrapper, not a child.
+    if (!wrap.contains(e.relatedTarget as Node)) wrap.classList.remove("drop-here");
+  };
+  wrap.ondrop = (e) => {
+    const id = e.dataTransfer?.getData("application/x-leaddeck-task");
+    wrap.classList.remove("drop-here");
+    if (!id) return;
+    e.preventDefault();
+    post({ type: "moveTask", id: id as never, project: s.id });
+  };
+
   const row = el("div", "strip");
   row.onclick = () => post({ type: "toggleStrip", id: s.id });
   // A chevron states the fold, so the row reads as expandable, not as a mystery.
@@ -186,6 +206,14 @@ function stripTasksEl(s: StripVm): HTMLElement {
   const inner = el("div", "st-inner");
   for (const p of s.pips) {
     const item = el("div", `st-row ${p.state}`);
+    // Drag a task to ANOTHER project's strip to re-home it (never to reorder).
+    item.draggable = true;
+    item.ondragstart = (e) => {
+      e.dataTransfer?.setData("application/x-leaddeck-task", p.id);
+      e.dataTransfer?.setData("text/plain", p.title);
+      item.classList.add("dragging");
+    };
+    item.ondragend = () => item.classList.remove("dragging");
 
     const title = el("button", "st-title");
     title.append(el("span", "st-g", stateGlyph(p.state)), document.createTextNode(p.title));

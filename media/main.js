@@ -47,6 +47,21 @@
   }
   function stripEl(s) {
     const wrap = el("div", `strip-wrap${s.open ? " open" : ""}`);
+    wrap.ondragover = (e) => {
+      if (!e.dataTransfer?.types.includes("application/x-leaddeck-task")) return;
+      e.preventDefault();
+      wrap.classList.add("drop-here");
+    };
+    wrap.ondragleave = (e) => {
+      if (!wrap.contains(e.relatedTarget)) wrap.classList.remove("drop-here");
+    };
+    wrap.ondrop = (e) => {
+      const id = e.dataTransfer?.getData("application/x-leaddeck-task");
+      wrap.classList.remove("drop-here");
+      if (!id) return;
+      e.preventDefault();
+      post({ type: "moveTask", id, project: s.id });
+    };
     const row = el("div", "strip");
     row.onclick = () => post({ type: "toggleStrip", id: s.id });
     row.append(el("span", "chev", s.open ? "\u25BE" : "\u25B8"), el("span", "p-name", s.title));
@@ -101,6 +116,13 @@
     const inner = el("div", "st-inner");
     for (const p of s.pips) {
       const item = el("div", `st-row ${p.state}`);
+      item.draggable = true;
+      item.ondragstart = (e) => {
+        e.dataTransfer?.setData("application/x-leaddeck-task", p.id);
+        e.dataTransfer?.setData("text/plain", p.title);
+        item.classList.add("dragging");
+      };
+      item.ondragend = () => item.classList.remove("dragging");
       const title = el("button", "st-title");
       title.append(el("span", "st-g", stateGlyph(p.state)), document.createTextNode(p.title));
       title.onclick = () => post({ type: "openSheet", kind: "task", id: p.id });
