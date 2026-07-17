@@ -341,7 +341,7 @@
         bar.append(arch);
       }
       if (a.canDelete) {
-        const del = el("button", "depth-b die");
+        const del = el("button", "depth-b danger");
         del.textContent = "\u2297 delete (empty)";
         del.title = "no tasks \u2014 remove this project";
         del.onclick = () => post({ type: "deleteProject", id: s.id });

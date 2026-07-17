@@ -515,7 +515,9 @@ function sheetEl(s: SheetVm): HTMLElement {
       bar.append(arch);
     }
     if (a.canDelete) {
-      const del = el("button", "depth-b die");
+      // NOT class "die" — that matches the `.die { display:none }` panel rule
+      // and the button vanished. `danger` carries the same red without the clash.
+      const del = el("button", "depth-b danger");
       del.textContent = "⊗ delete (empty)";
       del.title = "no tasks — remove this project";
       del.onclick = () => post({ type: "deleteProject", id: s.id as never });

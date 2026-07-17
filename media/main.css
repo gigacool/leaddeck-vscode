@@ -749,6 +749,10 @@ body {
 .depth-b .k { color: var(--fg-tertiary); margin-left: 5px; font-size: var(--fs-xs); }
 .depth-b.die { border-color: color-mix(in srgb, var(--death) 60%, var(--bg)); color: color-mix(in srgb, var(--death) 55%, var(--fg)); }
 .depth-b.die:hover { border-color: var(--death); }
+/* delete-a-project is destructive → red (not death's purple), and NOT class
+   `die`, which the `.die{display:none}` panel rule would hide. */
+.depth-b.danger { border-color: color-mix(in srgb, var(--danger) 55%, var(--bg)); color: color-mix(in srgb, var(--danger) 60%, var(--fg)); }
+.depth-b.danger:hover { border-color: var(--danger); color: var(--danger); }
 
 /* death — purple, never red. An ending, not a failure. */
 .die { display: none; align-items: center; gap: 9px; padding: 6px 12px; background: color-mix(in srgb, var(--death) 10%, var(--bg)); border-top: 1px solid color-mix(in srgb, var(--death) 35%, var(--bg)); }
