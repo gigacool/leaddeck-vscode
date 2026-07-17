@@ -97,7 +97,8 @@ class LauncherView implements vscode.WebviewViewProvider {
     view.webview.html = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
   :root { color-scheme: light dark; }
-  body { margin: 0; padding: 14px 16px; font-family: var(--vscode-font-family); font-size: 13px; line-height: 1.5; color: var(--vscode-foreground); background: transparent; }
+  html, body { background: var(--vscode-sideBar-background, transparent); }
+  body { margin: 0; padding: 14px 16px; font-family: var(--vscode-font-family); font-size: 13px; line-height: 1.5; color: var(--vscode-foreground); }
   p { margin: 0 0 14px; color: var(--vscode-descriptionForeground); }
   .btn {
     display: block; width: 100%; text-align: center;
