@@ -422,7 +422,13 @@ function sheetEl(s: SheetVm): HTMLElement {
   if (has("subtasks")) body.append(subtasksEl(s.subtasks ?? []));
   if (has("stakeholders")) body.append(stakeholdersEl(s.stakeholders ?? []));
   if (has("tags")) body.append(tagsEl(s.tags ?? []));
-  if (has("log")) body.append(logEl(s.log ?? []));
+  if (has("log")) {
+    const logField = logEl(s.log ?? []);
+    // Tagged so a WIDE sheet can float the log into a right-hand column (the
+    // 2-col split, but only when there is room — a container query decides).
+    logField.classList.add("fs-log");
+    body.append(logField);
+  }
 
   ed.append(body);
 

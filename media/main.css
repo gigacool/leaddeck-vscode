@@ -129,7 +129,9 @@ body.vscode-high-contrast-light {
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  background: var(--page);
+  /* The gutter colour on a wide screen — a touch darker than the page, so the
+     centred column reads as the content and the sides recede. */
+  background: color-mix(in srgb, var(--page) 88%, var(--ink));
   color: var(--fg);
   font-family: var(--ui);
   font-size: var(--fs-md);
@@ -138,7 +140,17 @@ body {
   overflow: hidden;
 }
 
-#app { display: flex; flex-direction: column; height: 100vh; }
+/*
+ * A max width, centred. On a big screen a full-width shelf/kanban/report is a
+ * long eye-track per line; capping the column and centring it keeps lines
+ * readable (Cédric's call — too wide is not legible). The gutters are the body
+ * background; the column carries --page.
+ */
+#app {
+  display: flex; flex-direction: column; height: 100vh;
+  max-width: 1180px; width: 100%; margin: 0 auto;
+  background: var(--page);
+}
 
 /* Scroll: the mockup is a static drawing and gives none. */
 .scroll { overflow-y: auto; overflow-x: hidden; }
@@ -502,6 +514,7 @@ body {
   border: 1px solid var(--border-strong);
   border-left: 5px solid var(--accent);
   border-radius: 2px;
+  container-type: inline-size; /* so .ed-fields can react to the sheet's WIDTH */
 }
 .ed.dead { border-left-color: var(--death); }
 
@@ -590,6 +603,28 @@ body {
 
 /* Single column. Milestones and Project.status died; the surface shrank. */
 .ed-fields { display: flex; flex-direction: column; }
+
+/*
+ * TWO COLUMNS ONLY WHEN THE SHEET IS WIDE. The spec rejected a permanent split
+ * (it halves the width until pips stop fitting, and it is v1's five-panel
+ * shape). Conditional on width, that risk is gone: on a narrow sheet nothing
+ * changes; on a wide one the log floats into a right column, where a running
+ * history has room to breathe. The other fields keep their left-column flow.
+ */
+@container (min-width: 620px) {
+  .ed-fields {
+    display: grid;
+    grid-template-columns: 1fr minmax(240px, 340px);
+    align-items: start;
+  }
+  /* Everything flows in the left column... */
+  .ed-fields > .fs { grid-column: 1; }
+  /* ...except the log, which takes the right column and spans the rows. */
+  .ed-fields > .fs-log {
+    grid-column: 2; grid-row: 1 / 999;
+    border-left: 1px solid var(--border); border-bottom: 0;
+  }
+}
 .fs { border-bottom: 1px solid var(--border); padding: 7px 12px 9px; }
 .fs:last-child { border-bottom: 0; }
 .fs-h { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; }
