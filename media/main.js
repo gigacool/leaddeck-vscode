@@ -748,6 +748,9 @@
     const key = active?.dataset["focus"];
     const start = active?.selectionStart ?? null;
     const end = active?.selectionEnd ?? null;
+    const liveValue = active && key ? active.value : null;
+    const isText = active instanceof HTMLInputElement && (active.type === "text" || active.type === "search" || active.type === "");
+    const isArea = active instanceof HTMLTextAreaElement;
     paint();
     if (!key) {
       const fresh = app.querySelector("input.ed-title-in[autofocus]");
@@ -756,6 +759,9 @@
     }
     const next = app.querySelector(`[data-focus="${key}"]`);
     if (!next) return;
+    if (liveValue !== null && (isText || isArea) && next.value !== liveValue) {
+      next.value = liveValue;
+    }
     next.focus();
     if (start !== null && end !== null && typeof next.setSelectionRange === "function") {
       try {

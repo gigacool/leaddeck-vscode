@@ -1083,6 +1083,16 @@ function withFocus(paint: () => void): void {
   const key = active?.dataset["focus"];
   const start = active?.selectionStart ?? null;
   const end = active?.selectionEnd ?? null;
+  // The value the user has RIGHT NOW — which is ahead of the ViewModel while a
+  // debounced save is in flight. The repaint writes the (older) model value onto
+  // the new input; re-applying the live value restores the characters typed
+  // during the round-trip and the space `.trim()` would have eaten. AD-14: the
+  // webview LEADS on text — a paint must never roll typed text back.
+  const liveValue = active && key ? active.value : null;
+  const isText =
+    active instanceof HTMLInputElement &&
+    (active.type === "text" || active.type === "search" || active.type === "");
+  const isArea = active instanceof HTMLTextAreaElement;
 
   paint();
 
@@ -1095,8 +1105,15 @@ function withFocus(paint: () => void): void {
     if (fresh && fresh.value === "") fresh.focus();
     return;
   }
-  const next = app.querySelector<HTMLInputElement>(`[data-focus="${key}"]`);
+  const next = app.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[data-focus="${key}"]`);
   if (!next) return;
+
+  // Restore the live text BEFORE placing the caret, so the caret lands in the
+  // text the user actually has, not the stale model value the paint wrote.
+  if (liveValue !== null && (isText || isArea) && next.value !== liveValue) {
+    next.value = liveValue;
+  }
+
   next.focus();
   if (start !== null && end !== null && typeof next.setSelectionRange === "function") {
     try {

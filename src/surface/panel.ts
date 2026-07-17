@@ -426,6 +426,15 @@ export class Workbench {
         }
 
         await applyEdit(this.#store, open, m, now);
+
+        // AD-14 — the webview LEADS on free text. A `setTitle`/`setDescription`/
+        // `setSubtaskText` is saved, but the webview already shows the value; a
+        // re-render here would write the (already-in-flight) model value back
+        // onto the field being typed in, eating spaces and jumping the caret.
+        // So text-input edits DO NOT repaint; structural edits still do.
+        if (m.type === "setTitle" || m.type === "setDescription" || m.type === "setSubtaskText") {
+          return;
+        }
         this.render();
         return;
       }
