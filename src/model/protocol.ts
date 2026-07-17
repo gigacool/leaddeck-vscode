@@ -25,6 +25,8 @@ export interface PipVm {
   state: "todo" | "doing" | "done" | "stale" | "block" | "raw";
   /** Committed to the shown week — the `.wk` outline. */
   wk: boolean;
+  /** The backlog filter is active AND this task matches it — highlight it. */
+  match?: boolean;
 }
 
 export interface StripVm {

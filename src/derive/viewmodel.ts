@@ -12,7 +12,7 @@ import type {
   StripVm,
   ViewModel,
 } from "../model/protocol.ts";
-import type { Day, Dataset, Task, Week } from "../model/types.ts";
+import type { Day, Dataset, Project, Task, Week } from "../model/types.ts";
 import { ruleBar, shelf, type ProjectStrip } from "./bands.ts";
 import { burndown } from "./burndown.ts";
 import { projectSheet, taskSheet, type ChordMap } from "./sheet.ts";
@@ -145,25 +145,33 @@ function whoVm(task: Task[], data: Dataset): StripVm["who"] {
  * search that hits a task keeps its project on the shelf. `q` is already
  * trimmed + lowercased by the caller.
  */
-function stripMatches(s: ProjectStrip, data: Dataset, q: string): boolean {
-  const stakeholderNames = (refs: { id: string }[]): string =>
-    refs
-      .map((r) => data.stakeholders.find((sh) => sh.id === r.id)?.name ?? "")
-      .join(" ");
+function stakeholderNames(data: Dataset, refs: { id: string }[]): string {
+  return refs.map((r) => data.stakeholders.find((sh) => sh.id === r.id)?.name ?? "").join(" ");
+}
 
-  const p = s.project;
-  const projectHay = [p.title, p.description, p.tags.join(" "), stakeholderNames(p.stakeholders)]
+/** Does a single task match the filter? On title, description, tags, people. */
+function taskMatches(t: Task, data: Dataset, q: string): boolean {
+  const hay = [t.title, t.description, t.tags.join(" "), stakeholderNames(data, t.stakeholders)]
     .join(" ")
     .toLowerCase();
-  if (projectHay.includes(q)) return true;
+  return hay.includes(q);
+}
 
-  return s.tasks.some((t) => {
-    if (t.death !== null) return false;
-    const taskHay = [t.title, t.description, t.tags.join(" "), stakeholderNames(t.stakeholders)]
-      .join(" ")
-      .toLowerCase();
-    return taskHay.includes(q);
-  });
+/** Does the project ITSELF match (its own text, not its tasks')? */
+function projectMatches(p: Project, data: Dataset, q: string): boolean {
+  const hay = [p.title, p.description, p.tags.join(" "), stakeholderNames(data, p.stakeholders)]
+    .join(" ")
+    .toLowerCase();
+  return hay.includes(q);
+}
+
+/**
+ * A project strip is kept by the filter if it matches on its own text OR any of
+ * its living tasks match — a task hit keeps its project on the shelf.
+ */
+function stripMatches(s: ProjectStrip, data: Dataset, q: string): boolean {
+  if (projectMatches(s.project, data, q)) return true;
+  return s.tasks.some((t) => t.death === null && taskMatches(t, data, q));
 }
 
 const DEFAULT_CHORDS: ChordMap = {
@@ -203,28 +211,38 @@ export function backlogVm(
     label: b.def.label,
     predicate: b.def.predicate,
     count: b.def.kind === "unsorted" ? b.captureCount : strips.length,
-    strips: strips.map((s): StripVm => ({
-      id: s.project.id,
-      title: s.project.title,
-      pips: s.tasks
-        .filter((t) => t.death === null)
-        // Open work first, finished work last (Cédric's call). NOT manual
-        // priority — the order is COMPUTED from `done`, a stable partition, not
-        // a sequence he drags. `done ? 1 : 0` keeps each group's own order.
-        .slice()
-        .sort((a, b) => (a.status === "done" ? 1 : 0) - (b.status === "done" ? 1 : 0))
-        .map((t): PipVm => ({
-          id: t.id,
-          title: t.title,
-          state: pipState(t, data, now),
-          wk: t.committed?.weekOf === week,
-        })),
-      done: s.done,
-      total: s.total,
-      signal: signalVm(s.signal),
-      who: whoVm(s.tasks.filter(isOpen), data),
-      open: expanded.includes(s.project.id),
-    })),
+    strips: strips.map((s): StripVm => {
+      // With a filter active, a task that matches is flagged (to highlight) and
+      // its project auto-unfolds — so a search that hits a task SHOWS that task,
+      // not just keeps the project on the shelf. The project's own match doesn't
+      // force an unfold: nothing to point at inside it.
+      const anyTaskMatches =
+        q !== "" && s.tasks.some((t) => t.death === null && taskMatches(t, data, q));
+      return {
+        id: s.project.id,
+        title: s.project.title,
+        pips: s.tasks
+          .filter((t) => t.death === null)
+          // Open work first, finished work last (Cédric's call). NOT manual
+          // priority — the order is COMPUTED from `done`, a stable partition, not
+          // a sequence he drags. `done ? 1 : 0` keeps each group's own order.
+          .slice()
+          .sort((a, b) => (a.status === "done" ? 1 : 0) - (b.status === "done" ? 1 : 0))
+          .map((t): PipVm => ({
+            id: t.id,
+            title: t.title,
+            state: pipState(t, data, now),
+            wk: t.committed?.weekOf === week,
+            ...(q !== "" && taskMatches(t, data, q) ? { match: true } : {}),
+          })),
+        done: s.done,
+        total: s.total,
+        signal: signalVm(s.signal),
+        who: whoVm(s.tasks.filter(isOpen), data),
+        // Auto-unfold when a task matches the filter; else honour his manual fold.
+        open: anyTaskMatches || expanded.includes(s.project.id),
+      };
+    }),
     captures:
       b.def.kind === "unsorted"
         ? unsorted.map((c) => ({

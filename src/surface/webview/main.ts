@@ -205,7 +205,7 @@ function stripTasksEl(s: StripVm): HTMLElement {
   // band Cédric saw. One wrapper, one collapsible track.
   const inner = el("div", "st-inner");
   for (const p of s.pips) {
-    const item = el("div", `st-row ${p.state}`);
+    const item = el("div", `st-row ${p.state}${p.match ? " match" : ""}`);
     // Drag a task to ANOTHER project's strip to re-home it (never to reorder).
     item.draggable = true;
     item.ondragstart = (e) => {

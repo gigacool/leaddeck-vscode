@@ -126,6 +126,23 @@ test("the backlog filter hides projects that match neither their text nor their 
   assert.ok(F("").length >= 2); // empty filter shows everything
 });
 
+test("a task-hit auto-unfolds its project and flags the matching task", () => {
+  const p = aProject({ title: "Bid" });
+  const d = dataset({
+    projects: [...dataset().projects, p],
+    tasks: [
+      aTask({ project: p.id, title: "call the lawyer" }),
+      aTask({ project: p.id, title: "send the deck" }),
+    ],
+  });
+  const strip = backlogVm(d, NOW, WEEK, false, undefined, null, undefined, [], [], false, "lawyer")
+    .bands.flatMap((b) => b.strips)
+    .find((s) => s.id === p.id)!;
+  assert.equal(strip.open, true); // auto-unfolded because a task matched
+  const flagged = strip.pips.filter((pip) => pip.match).map((pip) => pip.title);
+  assert.deepEqual(flagged, ["call the lawyer"]); // only the matching task is flagged
+});
+
 test("the filter matches tags and stakeholder names too", () => {
   const sarah = aStakeholder({ name: "Sarah Connor" });
   const p = aProject({ title: "Bid", tags: ["urgent"], stakeholders: [{ id: sarah.id, direction: "up" }] });

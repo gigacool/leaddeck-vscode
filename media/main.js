@@ -115,7 +115,7 @@
     const list = el("div", "strip-tasks");
     const inner = el("div", "st-inner");
     for (const p of s.pips) {
-      const item = el("div", `st-row ${p.state}`);
+      const item = el("div", `st-row ${p.state}${p.match ? " match" : ""}`);
       item.draggable = true;
       item.ondragstart = (e) => {
         e.dataTransfer?.setData("application/x-leaddeck-task", p.id);

@@ -417,6 +417,10 @@ body {
 }
 .st-row:hover { background: var(--hover); }
 .st-row.dragging { opacity: .4; }
+/* A task that matches the active backlog filter — highlighted, so the eye lands
+   on it in an unfolded project. */
+.st-row.match { background: color-mix(in srgb, var(--accent) 16%, var(--bg)); }
+.st-row.match .st-title { color: var(--fg); font-weight: 600; }
 /* A project lit up as a drop target while a task is dragged over it. */
 .strip-wrap.drop-here { outline: 2px solid var(--accent); outline-offset: -2px; background: color-mix(in srgb, var(--accent) 10%, var(--bg)); }
 .st-title {
