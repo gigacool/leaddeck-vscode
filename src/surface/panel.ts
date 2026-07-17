@@ -646,13 +646,27 @@ export class Workbench {
    */
   async #deleteProject(id: string): Promise<void> {
     if (id === INBOX_PROJECT_ID) return;
-    if (this.#store.data.tasks.some((t) => t.project === id)) return; // not empty
+    // "Empty" must match sheet.ts's canDelete EXACTLY: it counts only LIVING
+    // tasks (death === null). Counting dead ones too made the button appear
+    // (sheet said empty) while the delete silently refused (panel saw a corpse).
+    if (this.#store.data.tasks.some((t) => t.project === id && t.death === null)) return;
     await this.#store.mutate((d) => {
       const before = d.projects.length;
       d.projects = d.projects.filter((p) => p.id !== id);
-      return { touched: d.projects.length !== before ? ["projects"] : [] };
+      // Any task still pointing here is dead — drop it too, so no orphan ref is
+      // left behind (AD-10 would refuse to load a task whose project is gone).
+      d.tasks = d.tasks.filter((t) => t.project !== id);
+      const touched: ("projects" | "tasks")[] = [];
+      if (d.projects.length !== before) touched.push("projects", "tasks");
+      return { touched };
     });
-    this.#ui = { ...this.#ui, expanded: this.#ui.expanded.filter((x) => x !== id) };
+    // The sheet was open on the now-deleted project — close it, and drop stale
+    // fold state, so the next paint doesn't hunt for a project that is gone.
+    this.#ui = {
+      ...this.#ui,
+      open: this.#ui.open?.id === id ? null : this.#ui.open,
+      expanded: this.#ui.expanded.filter((x) => x !== id),
+    };
   }
 
   /** Re-home a task to another project (its only drag). No re-order. */
