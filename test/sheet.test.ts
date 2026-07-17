@@ -41,13 +41,22 @@ test("SHOW-ALL — a task sheet shows EVERY field, and the rail is empty", () =>
   assert.deepEqual(s.rail, []); // nothing left to offer — it is all shown
 });
 
-test("SHOW-ALL — a project shows its four fields, and no task-only ones", () => {
+test("SHOW-ALL — a project shows its fields, including log, and no task-only ones", () => {
   const p = aProject();
   const s = projectSheet(p, dataset({ projects: [p] }), NOW, CHORDS);
-  assert.deepEqual(s.fields.sort(), ["deadline", "description", "stakeholders", "tags"]);
-  // A project is not a task: never a status, subtasks, log, or commitment.
-  for (const f of ["subtasks", "log", "commit"]) assert.ok(!s.fields.includes(f as never));
+  // A project DOES carry a log — a capture can drop a note on it (FR-8), and the
+  // note was invisible until `log` was added to the project's fields.
+  assert.deepEqual(s.fields.sort(), ["deadline", "description", "log", "stakeholders", "tags"]);
+  // But a project is not a task: never a status, subtasks, or commitment.
+  for (const f of ["subtasks", "commit"]) assert.ok(!s.fields.includes(f as never));
   assert.deepEqual(s.rail, []);
+});
+
+test("FR-8 — a note dropped on a project is VISIBLE on its sheet", () => {
+  const p = aProject({ logMessages: [{ eventDate: NOW, message: "sarah asked about the bid" }] });
+  const s = projectSheet(p, dataset({ projects: [p] }), NOW, CHORDS);
+  assert.equal(s.log?.length, 1);
+  assert.equal(s.log?.[0]?.message, "sarah asked about the bid");
 });
 
 test("SHOW-ALL — an empty field shows but stays empty in the values", () => {
@@ -128,6 +137,25 @@ test("FR-27 — ↓ blocked tells him WHO to chase, not what to edit", () => {
 test("the sheet marks whether the commitment is THIS week", () => {
   assert.equal(sheetOf(aTask({ committed: { weekOf: WEEK } })).commit?.isThisWeek, true);
   assert.equal(sheetOf(aTask({ committed: { weekOf: "2026-W30" } })).commit?.isThisWeek, false);
+});
+
+test("FR-13 — a task can commit to THIS week or the next five, not just this one", () => {
+  const s = sheetOf(aTask());
+  // Six options: this week + 5 ahead. The old UI offered only "this week".
+  assert.equal(s.commitWeeks.length, 6);
+  assert.equal(s.commitWeeks[0]!.label, "this week");
+  assert.equal(s.commitWeeks[1]!.label, "next week");
+  assert.equal(s.commitWeeks[5]!.label, "in 5 weeks");
+  // The weeks step forward from now.
+  assert.equal(s.commitWeeks[0]!.weekOf, "2026-W29");
+  assert.equal(s.commitWeeks[1]!.weekOf, "2026-W30");
+});
+
+test("FR-13 — the committed week is marked current among the options", () => {
+  const s = sheetOf(aTask({ committed: { weekOf: "2026-W31" } }));
+  const current = s.commitWeeks.filter((w) => w.current);
+  assert.equal(current.length, 1);
+  assert.equal(current[0]!.weekOf, "2026-W31");
 });
 
 /* ---- FR-29: death ---- */

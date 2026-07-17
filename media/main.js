@@ -255,23 +255,14 @@
     }
     if (has("commit")) {
       const wrap = el("div", "commit");
-      if (s.commit !== null) {
-        const q = el("span", "commit-q");
-        q.append(document.createTextNode("In "), el("b", void 0, s.commit.weekOf), document.createTextNode("?"));
-        wrap.append(q);
-        const t = el("span", "commit-t");
-        const yes = el("span", "on", "yes");
-        const no = el("span", void 0, "no");
-        no.onclick = () => post({ type: "setCommit", weekOf: null });
-        t.append(yes, no);
-        wrap.append(t);
-      } else {
-        const commit = el("span", "commit-t");
-        const go = el("span", "on", "commit to this week");
-        go.onclick = () => post({ type: "commit", id: s.id });
-        commit.append(go);
-        wrap.append(commit);
+      const weeks = el("div", "commit-weeks");
+      for (const w of s.commitWeeks) {
+        const b = el("button", `commit-wk${w.current ? " on" : ""}`, w.label);
+        b.title = w.weekOf;
+        b.onclick = () => post({ type: "setCommit", weekOf: w.current ? null : w.weekOf });
+        weeks.append(b);
       }
+      wrap.append(weeks);
       body.append(field("the week", wrap, null, "the only judgment you author"));
     }
     if (has("subtasks")) body.append(subtasksEl(s.subtasks ?? []));

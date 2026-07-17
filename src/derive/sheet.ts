@@ -1,6 +1,23 @@
+import { addWeeks } from "../model/dates.ts";
 import type { RailItem, SheetField, SheetVm, SignalVm } from "../model/protocol.ts";
 import type { Day, Dataset, Project, Task, Week } from "../model/types.ts";
 import { urgencyOf, type UrgencySignal } from "./urgency.ts";
+
+/**
+ * The weeks a task can be committed to: this week and the next five (FR-13).
+ * `current` marks the one already chosen, so the UI can show it selected. The
+ * model always allowed any weekOf; this just surfaces the six he'd actually use.
+ */
+function commitWeekOptions(
+  thisWeek: Week,
+  committed: string | null,
+): { weekOf: string; label: string; current: boolean }[] {
+  return Array.from({ length: 6 }, (_, i) => {
+    const weekOf = addWeeks(thisWeek, i);
+    const label = i === 0 ? "this week" : i === 1 ? "next week" : `in ${i} weeks`;
+    return { weekOf, label, current: weekOf === committed };
+  });
+}
 
 /**
  * The editor sheet. Pure.
@@ -35,8 +52,12 @@ const RAIL: { field: SheetField; label: string; chord: keyof ChordMap }[] = [
   { field: "commit", label: "＋ commit to a week", chord: "commit" },
 ];
 
-/** A project is not a task: no status, no subtasks, no commitment, no log. */
-const PROJECT_FIELDS: SheetField[] = ["deadline", "description", "stakeholders", "tags"];
+/**
+ * A project is not a task: no status, no subtasks, no commitment. But it DOES
+ * carry a log — a capture can drop a note on a project (FR-8), and without `log`
+ * here that note was written to `logMessages` and never shown. That was the bug.
+ */
+const PROJECT_FIELDS: SheetField[] = ["deadline", "description", "stakeholders", "tags", "log"];
 
 /** Every field a task can carry, in rail order. Used by "show all". */
 const TASK_FIELDS: SheetField[] = RAIL.map((r) => r.field);
@@ -150,6 +171,7 @@ export function taskSheet(
     commit: task.committed
       ? { weekOf: task.committed.weekOf, isThisWeek: task.committed.weekOf === week }
       : null,
+    commitWeeks: commitWeekOptions(week, task.committed?.weekOf ?? null),
     fields: present,
     // `log` is repeatable, so it stays on the rail even once present.
     rail: SHOW_ALL
@@ -212,7 +234,7 @@ export function projectSheet(
     deadline: project.deadline,
     description: present.includes("description") ? project.description : null,
     subtasks: null,
-    log: null,
+    log: present.includes("log") ? project.logMessages : null,
     stakeholders: present.includes("stakeholders")
       ? project.stakeholders.map((ref) => ({
           id: ref.id,
@@ -222,6 +244,7 @@ export function projectSheet(
       : null,
     tags: present.includes("tags") ? project.tags : null,
     commit: null,
+    commitWeeks: [], // a project is not committed to a week
     fields: present,
     rail: SHOW_ALL ? [] : railFor(present, PROJECT_FIELDS, chords),
     death: null,

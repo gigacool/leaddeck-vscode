@@ -621,6 +621,17 @@ body {
 .commit-t span:last-child { border-right: 0; }
 .commit-t span.on { background: var(--week); color: var(--page); font-weight: 700; }
 
+/* commit weeks — this week + the next five (FR-13). Click to commit/release. */
+.commit-weeks { display: flex; flex-wrap: wrap; gap: 4px; margin-left: auto; }
+.commit-wk {
+  font-family: var(--mono); font-size: var(--fs-xs); white-space: nowrap;
+  background: color-mix(in srgb, var(--week) 10%, var(--bg));
+  color: var(--fg-dim); border: 1px solid color-mix(in srgb, var(--week) 40%, var(--bg));
+  border-radius: 2px; padding: 2px 8px; cursor: pointer;
+}
+.commit-wk:hover { border-color: var(--week); color: var(--fg); }
+.commit-wk.on { background: var(--week); color: var(--page); font-weight: 700; border-color: var(--week); }
+
 /* subtasks — flat, one level */
 .sub-l { display: flex; flex-direction: column; }
 .st { display: flex; align-items: center; gap: 8px; padding: 2.5px 5px; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, var(--bg)); font-size: var(--fs-md); }

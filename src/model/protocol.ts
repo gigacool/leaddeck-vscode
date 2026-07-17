@@ -126,6 +126,13 @@ export interface SheetVm {
   /** The only real judgment he authors. `weekOf` when committed. */
   commit: { weekOf: string; isThisWeek: boolean } | null;
   /**
+   * The weeks he can commit to: this week and the next five (FR-13 asked for
+   * 1–5 weeks ahead, and the UI only ever offered "this week" — a bug, not a
+   * model limit). Each carries its `weekOf`, a label, and whether it is the one
+   * currently committed. Only present on a task sheet.
+   */
+  commitWeeks: { weekOf: string; label: string; current: boolean }[];
+  /**
    * Which fields the sheet SHOWS, regardless of whether they hold a value. When
    * "show all" is on (Cédric's call — depth-on-demand was more chore than
    * offer), this is every field the kind allows, so the layout is identical

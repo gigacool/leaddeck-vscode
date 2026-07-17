@@ -404,24 +404,18 @@ function sheetEl(s: SheetVm): HTMLElement {
 
   if (has("commit")) {
     const wrap = el("div", "commit");
-    if (s.commit !== null) {
-      const q = el("span", "commit-q");
-      q.append(document.createTextNode("In "), el("b", undefined, s.commit.weekOf), document.createTextNode("?"));
-      wrap.append(q);
-      const t = el("span", "commit-t");
-      const yes = el("span", "on", "yes");
-      const no = el("span", undefined, "no");
-      no.onclick = () => post({ type: "setCommit", weekOf: null });
-      t.append(yes, no);
-      wrap.append(t);
-    } else {
-      // Not committed yet — the empty state is the offer to commit to this week.
-      const commit = el("span", "commit-t");
-      const go = el("span", "on", "commit to this week");
-      go.onclick = () => post({ type: "commit", id: s.id as never });
-      commit.append(go);
-      wrap.append(commit);
+    // A row of weeks — this week and the next five (FR-13). Click one to commit
+    // to it; click the current one again to release. The model always allowed
+    // any week; the old UI only ever offered "this week", which was the bug.
+    const weeks = el("div", "commit-weeks");
+    for (const w of s.commitWeeks) {
+      const b = el("button", `commit-wk${w.current ? " on" : ""}`, w.label);
+      b.title = w.weekOf;
+      b.onclick = () =>
+        post({ type: "setCommit", weekOf: w.current ? null : (w.weekOf as never) });
+      weeks.append(b);
     }
+    wrap.append(weeks);
     body.append(field("the week", wrap, null, "the only judgment you author"));
   }
 
