@@ -84,6 +84,10 @@ export interface BacklogVm {
    * differ per OS, and `derive/` cannot reach `vscode` to know which.
    */
   captureChord: string;
+  /** The active backlog filter text, so the input renders its current value. */
+  filter: string;
+  /** How many projects the filter is hiding, for the "N hidden" note. */
+  filteredOut: number;
 }
 
 /**
@@ -284,6 +288,8 @@ export type WebviewMessage =
   | { type: "deleteProject"; id: ProjectId }
   /** Fold / unfold the ARCHIVED band. */
   | { type: "toggleArchived" }
+  /** Set the backlog filter text. Debounced in the webview (AD-14). */
+  | { type: "setFilter"; value: string }
   | { type: "newProject" }
   /**
    * A task born ON a strip, with a project from birth.

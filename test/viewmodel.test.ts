@@ -23,6 +23,7 @@ const ui = (over: Partial<UiState> = {}): UiState => ({
   asked: [],
   expanded: [],
   archivedOpen: false,
+  filter: "",
   weekOffset: 0,
   root: "/home/cedric/LeadDeck",
   rootKind: "home",
@@ -102,6 +103,51 @@ test("a capture resolved to a task becomes VISIBLE — the first-run bug", () =>
   const pips = backlogVm(d, NOW, WEEK, false).bands.flatMap((b) => b.strips.flatMap((s) => s.pips));
   assert.equal(pips.length, 1);
   assert.equal(pips[0]!.title, "comex deck — Q3 numbers");
+});
+
+test("the backlog filter hides projects that match neither their text nor their tasks'", () => {
+  const helvetia = aProject({ title: "Helvetia bid" });
+  const comex = aProject({ title: "COMEX deck" });
+  const d = dataset({
+    projects: [...dataset().projects, helvetia, comex],
+    tasks: [
+      aTask({ project: helvetia.id, title: "draft the terms" }),
+      aTask({ project: comex.id, title: "build the slides" }),
+    ],
+  });
+  const F = (q: string) =>
+    backlogVm(d, NOW, WEEK, false, undefined, null, undefined, [], [], false, q)
+      .bands.flatMap((b) => b.strips)
+      .map((s) => s.title);
+
+  assert.deepEqual(F("helvetia"), ["Helvetia bid"]); // project title match
+  assert.deepEqual(F("slides"), ["COMEX deck"]); // task title match keeps its project
+  assert.deepEqual(F("nothing here").length, 0); // no match hides all
+  assert.ok(F("").length >= 2); // empty filter shows everything
+});
+
+test("the filter matches tags and stakeholder names too", () => {
+  const sarah = aStakeholder({ name: "Sarah Connor" });
+  const p = aProject({ title: "Bid", tags: ["urgent"], stakeholders: [{ id: sarah.id, direction: "up" }] });
+  const d = dataset({ projects: [...dataset().projects, p], tasks: [aTask({ project: p.id })], stakeholders: [sarah] });
+  const F = (q: string) =>
+    backlogVm(d, NOW, WEEK, false, undefined, null, undefined, [], [], false, q)
+      .bands.flatMap((b) => b.strips)
+      .map((s) => s.title);
+  assert.deepEqual(F("urgent"), ["Bid"]); // tag
+  assert.deepEqual(F("connor"), ["Bid"]); // stakeholder name, case-insensitive
+});
+
+test("filteredOut reports how many live projects the filter hides", () => {
+  const a = aProject({ title: "Alpha" });
+  const b = aProject({ title: "Beta" });
+  const d = dataset({
+    projects: [...dataset().projects, a, b],
+    tasks: [aTask({ project: a.id }), aTask({ project: b.id })],
+  });
+  const vm = backlogVm(d, NOW, WEEK, false, undefined, null, undefined, [], [], false, "alpha");
+  assert.equal(vm.filter, "alpha");
+  assert.equal(vm.filteredOut, 1); // Beta hidden (Inbox has no task, not counted as shown)
 });
 
 test("open work sorts before finished work in a strip — computed, not dragged", () => {

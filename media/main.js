@@ -524,6 +524,16 @@
     add.title = "add a project";
     add.onclick = () => post({ type: "newProject" });
     bar.append(add);
+    const filter = el("input", "shelf-filter");
+    filter.type = "search";
+    filter.placeholder = "\u{1F50D} filter projects & tasks\u2026";
+    filter.value = b.filter;
+    filter.dataset["focus"] = "shelf-filter";
+    filter.oninput = debounce(() => post({ type: "setFilter", value: filter.value }), 200);
+    bar.append(filter);
+    if (b.filteredOut > 0) {
+      bar.append(el("span", "shelf-filter-n", `${b.filteredOut} hidden`));
+    }
     wrap.append(bar);
     const shelf = el("div", `shelf scroll${b.drain ? " draining" : ""}`);
     const claimed = b.sheet !== null && b.bands.some(

@@ -13,7 +13,7 @@ import type {
   ViewModel,
 } from "../model/protocol.ts";
 import type { Day, Dataset, Task, Week } from "../model/types.ts";
-import { ruleBar, shelf } from "./bands.ts";
+import { ruleBar, shelf, type ProjectStrip } from "./bands.ts";
 import { burndown } from "./burndown.ts";
 import { projectSheet, taskSheet, type ChordMap } from "./sheet.ts";
 import { idleDays, isBlocked, isOpen, urgencyOf, type UrgencySignal } from "./urgency.ts";
@@ -67,6 +67,14 @@ export interface UiState {
   expanded: string[];
   /** The ARCHIVED band is folded by default; this remembers when he opens it. */
   archivedOpen: boolean;
+  /**
+   * Free-text filter over the BACKLOG only (Cédric's call — a strong focus on
+   * the shelf, not the analytics panel that killed v1). Matches a project's or
+   * its tasks' text: title, description, tag, stakeholder name. Empty = no
+   * filter. It hides; it never aggregates, never persists across the mode
+   * switch. A11y: the input is where the webview leads (AD-14).
+   */
+  filter: string;
   /**
    * FR-20 — how many weeks BACK the report is viewing. 0 is this week; the
    * stepper is bounded at six, so this never exceeds 5. It affects the REPORT
@@ -131,6 +139,33 @@ function whoVm(task: Task[], data: Dataset): StripVm["who"] {
   return null;
 }
 
+/**
+ * Does a project strip match the backlog filter? On its own text (title,
+ * description, tags, stakeholder names) OR any of its living tasks' text — so a
+ * search that hits a task keeps its project on the shelf. `q` is already
+ * trimmed + lowercased by the caller.
+ */
+function stripMatches(s: ProjectStrip, data: Dataset, q: string): boolean {
+  const stakeholderNames = (refs: { id: string }[]): string =>
+    refs
+      .map((r) => data.stakeholders.find((sh) => sh.id === r.id)?.name ?? "")
+      .join(" ");
+
+  const p = s.project;
+  const projectHay = [p.title, p.description, p.tags.join(" "), stakeholderNames(p.stakeholders)]
+    .join(" ")
+    .toLowerCase();
+  if (projectHay.includes(q)) return true;
+
+  return s.tasks.some((t) => {
+    if (t.death !== null) return false;
+    const taskHay = [t.title, t.description, t.tags.join(" "), stakeholderNames(t.stakeholders)]
+      .join(" ")
+      .toLowerCase();
+    return taskHay.includes(q);
+  });
+}
+
 const DEFAULT_CHORDS: ChordMap = {
   deadline: "Ctrl+D",
   subtasks: "Ctrl+Shift+S",
@@ -152,16 +187,23 @@ export function backlogVm(
   asked: SheetField[] = [],
   expanded: string[] = [],
   archivedOpen = false,
+  filter = "",
 ): BacklogVm {
   const bands = shelf(data, now);
+  const q = filter.trim().toLowerCase();
   const unsorted = data.captures.filter((c) => c.state === "unsorted");
 
-  const vm: BandVm[] = bands.map((b) => ({
+  const vm: BandVm[] = bands.map((b) => {
+    // The filter HIDES strips whose project (and none of its tasks) matches.
+    // A project matches on its own text or ANY of its tasks' text — so a search
+    // that hits a task keeps its project on the shelf, with that task visible.
+    const strips = q === "" ? b.strips : b.strips.filter((s) => stripMatches(s, data, q));
+    return {
     kind: b.def.kind,
     label: b.def.label,
     predicate: b.def.predicate,
-    count: b.def.kind === "unsorted" ? b.captureCount : b.strips.length,
-    strips: b.strips.map((s): StripVm => ({
+    count: b.def.kind === "unsorted" ? b.captureCount : strips.length,
+    strips: strips.map((s): StripVm => ({
       id: s.project.id,
       title: s.project.title,
       pips: s.tasks
@@ -193,7 +235,8 @@ export function backlogVm(
         : [],
     oldestCaptureDays: b.oldestCaptureDays,
     ...(b.def.kind === "archived" ? { folded: !archivedOpen } : {}),
-  }));
+    };
+  });
 
   // Archived projects are not part of the "living work" count — they left it.
   const shownProjects = vm
@@ -232,6 +275,18 @@ export function backlogVm(
             resolved: data.captures.filter((c) => c.state === "resolved").length,
           }
         : null,
+    filter,
+    // Projects the FILTER hides: those that WOULD be on the shelf (drawn by
+    // shelf(), so not archived and not an empty Inbox) but don't match. Computed
+    // against the pre-filter band strips, not the project total — the Inbox and
+    // empty projects were never "shown", so they are not "hidden by the filter".
+    filteredOut:
+      q === ""
+        ? 0
+        : bands
+            .filter((b) => b.def.kind !== "archived")
+            .flatMap((b) => b.strips)
+            .filter((s) => !stripMatches(s, data, q)).length,
   };
 }
 
@@ -384,7 +439,7 @@ export function buildViewModel(
     rootKind: ui.rootKind,
     backlog:
       ui.mode === "backlog"
-        ? backlogVm(data, now, week, ui.drainOpen, ui.captureChord, ui.open, ui.chords, ui.asked, ui.expanded, ui.archivedOpen)
+        ? backlogVm(data, now, week, ui.drainOpen, ui.captureChord, ui.open, ui.chords, ui.asked, ui.expanded, ui.archivedOpen, ui.filter)
         : null,
     kanban: ui.mode === "kanban" ? kanbanVm(data, now, week) : null,
     report:

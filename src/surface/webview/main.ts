@@ -734,6 +734,21 @@ function backlogEl(b: BacklogVm): HTMLElement {
   add.title = "add a project";
   add.onclick = () => post({ type: "newProject" });
   bar.append(add);
+
+  // Free-text filter over the backlog (title/description/tag/stakeholder). It
+  // hides, never aggregates. The webview leads on this input (AD-14): debounced,
+  // and data-focus keeps the caret through the repaint.
+  const filter = el("input", "shelf-filter") as HTMLInputElement;
+  filter.type = "search";
+  filter.placeholder = "🔍 filter projects & tasks…";
+  filter.value = b.filter;
+  filter.dataset["focus"] = "shelf-filter";
+  filter.oninput = debounce(() => post({ type: "setFilter", value: filter.value }), 200);
+  bar.append(filter);
+
+  if (b.filteredOut > 0) {
+    bar.append(el("span", "shelf-filter-n", `${b.filteredOut} hidden`));
+  }
   wrap.append(bar);
 
   const shelf = el("div", `shelf scroll${b.drain ? " draining" : ""}`);

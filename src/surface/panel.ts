@@ -145,6 +145,7 @@ export class Workbench {
       asked: [],
       expanded: [],
       archivedOpen: false,
+      filter: "",
       weekOffset: 0,
       root: store.root,
       rootKind,
@@ -375,6 +376,11 @@ export class Workbench {
 
       case "toggleArchived":
         this.#ui = { ...this.#ui, archivedOpen: !this.#ui.archivedOpen };
+        this.render();
+        return;
+
+      case "setFilter":
+        this.#ui = { ...this.#ui, filter: m.value };
         this.render();
         return;
 
