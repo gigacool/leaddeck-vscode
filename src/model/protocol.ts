@@ -221,7 +221,10 @@ export interface ViewModel {
 }
 
 /** host → webview. One message. Always whole. */
-export type HostMessage = { type: "render"; vm: ViewModel };
+export type HostMessage =
+  | { type: "render"; vm: ViewModel }
+  /** Fire the confetti burst in the workbench. Purely visual — no state. */
+  | { type: "celebrate" };
 
 /** webview → host. Intent only — the webview never writes. */
 export type WebviewMessage =

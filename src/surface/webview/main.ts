@@ -1124,7 +1124,79 @@ function render(vm: ViewModel): void {
 
 window.addEventListener("message", (e: MessageEvent<HostMessage>) => {
   if (e.data.type === "render") render(e.data.vm);
+  else if (e.data.type === "celebrate") celebrate();
 });
+
+/*
+ * Confetti — vanilla canvas, no dependency (the strict CSP blocks any CDN).
+ * A full-screen burst for a small win. Purely visual, pointer-events: none, so
+ * it never interferes with the workbench beneath it.
+ */
+const CONFETTI_COLOURS = ["#f94144", "#f3722c", "#f9c74f", "#90be6d", "#43aa8b", "#577590", "#c77dff"];
+let confettiPieces: {
+  x: number; y: number; vx: number; vy: number; g: number;
+  w: number; h: number; rot: number; vr: number; life: number; c: string;
+}[] = [];
+let confettiRaf = 0;
+let confettiCanvas: HTMLCanvasElement | null = null;
+
+function celebrate(): void {
+  if (!confettiCanvas) {
+    confettiCanvas = document.createElement("canvas");
+    confettiCanvas.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:9999";
+    document.body.appendChild(confettiCanvas);
+  }
+  const cv = confettiCanvas;
+  cv.width = window.innerWidth;
+  cv.height = window.innerHeight;
+  for (let i = 0; i < 220; i++) {
+    confettiPieces.push({
+      x: cv.width / 2 + (Math.random() - 0.5) * cv.width * 0.5,
+      y: cv.height * 0.3 + (Math.random() - 0.5) * 60,
+      vx: (Math.random() - 0.5) * 10,
+      vy: Math.random() * -10 - 4,
+      g: 0.2 + Math.random() * 0.12,
+      w: 6 + Math.random() * 6,
+      h: 9 + Math.random() * 8,
+      rot: Math.random() * Math.PI,
+      vr: (Math.random() - 0.5) * 0.35,
+      life: 110 + Math.random() * 60,
+      c: CONFETTI_COLOURS[(Math.random() * CONFETTI_COLOURS.length) | 0]!,
+    });
+  }
+  if (!confettiRaf) confettiTick();
+}
+
+function confettiTick(): void {
+  const cv = confettiCanvas;
+  const ctx = cv?.getContext("2d");
+  if (!cv || !ctx) {
+    confettiRaf = 0;
+    return;
+  }
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  confettiPieces = confettiPieces.filter((p) => p.life > 0 && p.y < cv.height + 20);
+  for (const p of confettiPieces) {
+    p.vy += p.g;
+    p.x += p.vx;
+    p.y += p.vy;
+    p.rot += p.vr;
+    p.life--;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, p.life / 45));
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot);
+    ctx.fillStyle = p.c;
+    ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    ctx.restore();
+  }
+  if (confettiPieces.length) {
+    confettiRaf = requestAnimationFrame(confettiTick);
+  } else {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    confettiRaf = 0;
+  }
+}
 
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;

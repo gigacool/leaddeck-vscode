@@ -789,6 +789,11 @@ export class Workbench {
     this.#disposables = [];
   }
 
+  /** Fire the confetti in the workbench webview. Purely visual. */
+  celebrate(): void {
+    void this.#panel.webview.postMessage({ type: "celebrate" } satisfies HostMessage);
+  }
+
   /** A foreign write landed (AD-8). Repaint. */
   onExternalChange(): void {
     this.render();

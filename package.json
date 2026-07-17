@@ -48,6 +48,10 @@
       {
         "command": "leaddeck.open",
         "title": "LeadDeck: Open Workbench"
+      },
+      {
+        "command": "leaddeck.celebrate",
+        "title": "LeadDeck: Celebrate 🎉"
       }
     ],
     "keybindings": [
