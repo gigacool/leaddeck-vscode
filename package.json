@@ -58,8 +58,8 @@
       },
       {
         "command": "leaddeck.open",
-        "key": "ctrl+alt+k",
-        "mac": "cmd+alt+k"
+        "key": "ctrl+alt+o",
+        "mac": "cmd+alt+o"
       }
     ],
     "configuration": {

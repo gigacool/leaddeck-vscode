@@ -91,15 +91,53 @@ export class Workbench {
       "leaddeck.workbench",
       "LeadDeck",
       vscode.ViewColumn.One,
-      {
-        enableScripts: true,
-        retainContextWhenHidden: true,
-        // AD-12: assets are external files, served from cspSource. That is also
-        // what removes the need for a nonce — nothing is inline.
-        localResourceRoots: [vscode.Uri.joinPath(ctx.extensionUri, "media")],
-      },
+      Workbench.#panelOptions(ctx),
     );
+    return Workbench.#adopt(ctx, panel, store, rootKind, reportDir);
+  }
 
+  /**
+   * Re-attach to a panel VS Code restored on restart. Without this, closing the
+   * IDE lost the workbench — every other editor came back but LeadDeck did not.
+   * Registered as a WebviewPanelSerializer in `activate`, so the panel reopens
+   * where it was. Fresh UI state (no selection, this week): the panel is
+   * restored, the transient view is not, and re-deriving from the store is
+   * cheaper and safer than trusting a serialized snapshot.
+   */
+  static revive(
+    ctx: vscode.ExtensionContext,
+    panel: vscode.WebviewPanel,
+    store: Store,
+    rootKind: UiState["rootKind"],
+    reportDir: string,
+  ): Workbench {
+    if (Workbench.current) {
+      // Already live (activation opened it first) — the restored panel is a
+      // duplicate; drop it and keep the one in hand.
+      panel.dispose();
+      return Workbench.current;
+    }
+    panel.webview.options = Workbench.#panelOptions(ctx);
+    return Workbench.#adopt(ctx, panel, store, rootKind, reportDir);
+  }
+
+  static #panelOptions(ctx: vscode.ExtensionContext): vscode.WebviewOptions & { retainContextWhenHidden: boolean } {
+    return {
+      enableScripts: true,
+      retainContextWhenHidden: true,
+      // AD-12: assets are external files, served from cspSource. That is also
+      // what removes the need for a nonce — nothing is inline.
+      localResourceRoots: [vscode.Uri.joinPath(ctx.extensionUri, "media")],
+    };
+  }
+
+  static #adopt(
+    ctx: vscode.ExtensionContext,
+    panel: vscode.WebviewPanel,
+    store: Store,
+    rootKind: UiState["rootKind"],
+    reportDir: string,
+  ): Workbench {
     const wb = new Workbench(panel, store, {
       mode: "backlog",
       drainOpen: false,

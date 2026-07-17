@@ -47,6 +47,15 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
     watch(root),
     ...statusBar(),
     vscode.window.registerWebviewViewProvider("leaddeck.launcher", new LauncherView()),
+    // Restore the workbench on restart — VS Code reopens the panel and hands it
+    // back here, so it comes back with the other editors instead of vanishing.
+    vscode.window.registerWebviewPanelSerializer("leaddeck.workbench", {
+      async deserializeWebviewPanel(panel: vscode.WebviewPanel): Promise<void> {
+        if (!store) return;
+        workbench = Workbench.revive(ctx, panel, store, root.kind, reportDir);
+        workbench.render();
+      },
+    }),
   );
 }
 
@@ -65,7 +74,7 @@ function statusBar(): vscode.Disposable[] {
 
   const open = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 99);
   open.text = "$(checklist) LeadDeck";
-  open.tooltip = "LeadDeck: open the workbench (Ctrl+Alt+K)";
+  open.tooltip = "LeadDeck: open the workbench (Ctrl+Alt+O)";
   open.command = "leaddeck.open";
   open.show();
 
@@ -83,20 +92,37 @@ class LauncherView implements vscode.WebviewViewProvider {
     view.webview.options = { enableScripts: true };
     view.webview.html = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
-  body { padding: 10px 8px; font-family: var(--vscode-font-family); color: var(--vscode-foreground); }
-  button { display: block; width: 100%; text-align: left; margin: 0 0 6px; padding: 6px 10px;
-    background: var(--vscode-button-secondaryBackground, #3a3d41); color: var(--vscode-button-secondaryForeground, #fff);
-    border: none; border-radius: 2px; cursor: pointer; font-size: 13px; }
-  button.pri { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
-  button:hover { filter: brightness(1.1); }
-  .hint { color: var(--vscode-descriptionForeground); font-size: 11px; margin: 2px 2px 10px; }
+  :root { color-scheme: light dark; }
+  body { margin: 0; padding: 12px 12px 8px; font-family: var(--vscode-font-family); font-size: 13px; color: var(--vscode-foreground); }
+  .act {
+    display: flex; align-items: center; gap: 9px; width: 100%;
+    text-align: left; margin: 0 0 8px; padding: 8px 11px;
+    background: var(--vscode-button-secondaryBackground, #313131);
+    color: var(--vscode-button-secondaryForeground, #ccc);
+    border: 1px solid transparent; border-radius: 4px; cursor: pointer; font: inherit;
+  }
+  .act.pri { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
+  .act:hover { background: var(--vscode-button-secondaryHoverBackground, #3c3c3c); }
+  .act.pri:hover { background: var(--vscode-button-hoverBackground); }
+  .act:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 1px; }
+  .ico { font-size: 15px; line-height: 1; width: 16px; text-align: center; flex: 0 0 auto; }
+  .lbl { flex: 1; }
+  .kbd { font-family: var(--vscode-editor-font-family, monospace); font-size: 10px; opacity: .7; white-space: nowrap; }
+  .sep { height: 1px; background: var(--vscode-widget-border, #454545); margin: 4px 0 12px; opacity: .5; }
 </style></head><body>
-  <button class="pri" onclick="go('leaddeck.open')">▸ Open workbench</button>
-  <button onclick="go('leaddeck.capture')">⚡ Capture a thought</button>
-  <div class="hint">Ctrl+Alt+K · Ctrl+Alt+L</div>
+  <button class="act pri" onclick="go('leaddeck.open')">
+    <span class="ico">▤</span><span class="lbl">Open workbench</span><span class="kbd" id="k-open"></span>
+  </button>
+  <button class="act" onclick="go('leaddeck.capture')">
+    <span class="ico">⚡</span><span class="lbl">Capture a thought</span><span class="kbd" id="k-cap"></span>
+  </button>
+  <div class="sep"></div>
   <script>
     const vscode = acquireVsCodeApi();
     function go(cmd) { vscode.postMessage({ cmd }); }
+    const mac = navigator.platform.toLowerCase().includes('mac');
+    document.getElementById('k-open').textContent = mac ? '⌘⌥O' : 'Ctrl+Alt+O';
+    document.getElementById('k-cap').textContent = mac ? '⌘⌥L' : 'Ctrl+Alt+L';
   </script>
 </body></html>`;
     view.webview.onDidReceiveMessage((m: { cmd?: string }) => {
