@@ -32,8 +32,17 @@ export interface UiState {
   drainOpen: boolean;
   root: string;
   rootKind: "local" | "configured" | "home";
-  /** Which sheet is unfolded, if any. UI state — never persisted. */
-  open: { kind: "task" | "project"; id: string } | null;
+  /**
+   * Which sheet is unfolded, if any. UI state — never persisted.
+   *
+   * `draft` marks a sheet opened on an entity that does NOT exist on disk yet:
+   * `＋ task` / `＋ project` open an empty editor and write nothing. The entity
+   * is materialised only on the first non-empty title (see panel `#setTitle`).
+   * This makes "a title is never empty" true BY CONSTRUCTION — closing a draft
+   * without typing leaves no record, so no invalid row can ever reach the store
+   * and halt the next load (AD-10). For a task draft, `project` is its home.
+   */
+  open: { kind: "task" | "project"; id: string; draft?: boolean; project?: string } | null;
   /**
    * Fields ASKED FOR but still empty — `＋ tag` clicked, nothing typed yet.
    *

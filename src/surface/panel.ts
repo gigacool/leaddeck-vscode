@@ -5,6 +5,7 @@ import { reportSkeleton } from "../derive/skeleton.ts";
 import { buildViewModel, reportVm, STEPPER_WEEKS, type UiState } from "../derive/viewmodel.ts";
 import { addWeeks, toDay, toWeek } from "../model/dates.ts";
 import type { HostMessage, Mode, WebviewMessage } from "../model/protocol.ts";
+import { INBOX_PROJECT_ID, type Dataset, type Project, type ProjectId, type Task, type TaskId } from "../model/types.ts";
 import type { Store } from "../store/store.ts";
 import { applyEdit } from "./edit.ts";
 
@@ -152,7 +153,7 @@ export class Workbench {
   render(): void {
     const now = new Date();
     const vm = buildViewModel(
-      this.#store.data,
+      this.#dataForRender(now),
       toDay(now),
       toWeek(now),
       this.#ui,
@@ -160,6 +161,49 @@ export class Workbench {
     );
     const msg: HostMessage = { type: "render", vm };
     void this.#panel.webview.postMessage(msg);
+  }
+
+  /**
+   * The dataset the paint sees. Almost always `store.data` — but when a `＋`
+   * draft is open, the unwritten entity is injected here for RENDER ONLY, so
+   * the sheet can show it without it ever touching disk. The store never sees
+   * it; closing the draft simply drops it. This is what makes an empty title
+   * impossible on disk rather than merely discouraged.
+   */
+  #dataForRender(now: Date): Dataset {
+    const open = this.#ui.open;
+    if (!open?.draft) return this.#store.data;
+
+    const d = this.#store.data;
+    if (open.kind === "project") {
+      const draft: Project = {
+        id: open.id as ProjectId,
+        title: "",
+        description: "",
+        deadline: null,
+        stakeholders: [],
+        tags: [],
+        logMessages: [],
+      };
+      return { ...d, projects: [...d.projects, draft] };
+    }
+    const draft: Task = {
+      id: open.id as TaskId,
+      title: "",
+      description: "",
+      project: (open.project ?? INBOX_PROJECT_ID) as ProjectId,
+      deadline: null,
+      status: "todo",
+      subtasks: [],
+      logMessages: [],
+      stakeholders: [],
+      tags: [],
+      committed: null,
+      todoSince: toDay(now),
+      doneAt: null,
+      death: null,
+    };
+    return { ...d, tasks: [...d.tasks, draft] };
   }
 
   /**
@@ -262,7 +306,7 @@ export class Workbench {
         return;
 
       case "newTask":
-        await this.#newTask(m.project, now);
+        await this.#newTask(m.project);
         this.render();
         return;
 
@@ -270,6 +314,19 @@ export class Workbench {
         // Every remaining message is a sheet edit. Saves as you type.
         const open = this.#ui.open;
         if (!open) return;
+
+        // A DRAFT sheet holds no entity yet. The first non-empty title is what
+        // brings it into being — before that, there is nothing on disk to edit.
+        // Any other edit on a draft (a tag, a deadline) is dropped: you name the
+        // thing first. This is the whole mechanism that keeps an empty title off
+        // disk, so an invalid row can never halt the next load (AD-10).
+        if (open.draft) {
+          if (m.type === "setTitle" && m.value.trim() !== "") {
+            await this.#materialiseDraft(open, m.value, now);
+            this.render();
+          }
+          return;
+        }
 
         // The rail's click is INTENT, and for tags/stakeholders/log there is
         // nothing to write yet — an empty tag is not a tag. Record the ask so
@@ -295,58 +352,81 @@ export class Workbench {
    * A bare project is a finished project. No name prompt, no wizard, no
    * required fields — it is born empty and the sheet opens on its title.
    */
+  /**
+   * `＋ project` opens an empty sheet on a DRAFT — nothing is written yet. The
+   * project is materialised on its first non-empty title (`#setTitle`). Close
+   * without typing and no project was ever born, so no empty-titled row can
+   * reach the store and halt the next load.
+   */
   async #newProject(): Promise<void> {
     const { newProjectId } = await import("../model/ids.ts");
-    const id = newProjectId();
-    await this.#store.mutate((d) => {
-      d.projects.push({
-        id,
-        title: "Untitled project",
-        description: "",
-        deadline: null,
-        stakeholders: [],
-        tags: [],
-        logMessages: [],
-      });
-      return { touched: ["projects"] };
-    });
-    this.#ui = { ...this.#ui, open: { kind: "project", id } };
+    this.#ui = { ...this.#ui, open: { kind: "project", id: newProjectId(), draft: true }, asked: [] };
   }
 
   /**
-   * A bare task is a finished task — same law as `＋ project`, one level down.
-   *
-   * It is born with a project, which is the whole difference from a capture: no
-   * inbox, no drain, no "what is this?" — he is looking at the strip, so the
-   * answer is already on screen.
+   * `＋ task` — same draft rule as `＋ project`, one level down. Born WITH a
+   * project (he is looking at the strip, so the home is already answered), but
+   * still written only on the first non-empty title.
    */
-  async #newTask(project: string, now: Date): Promise<void> {
+  async #newTask(project: string): Promise<void> {
+    if (!this.#store.data.projects.some((p) => p.id === project)) return;
     const { newTaskId } = await import("../model/ids.ts");
-    const id = newTaskId();
-    await this.#store.mutate((d) => {
-      if (!d.projects.some((p) => p.id === project)) return { touched: [] };
-      d.tasks.push({
-        id,
-        title: "",
-        description: "",
-        project: project as never,
-        deadline: null,
-        status: "todo",
-        subtasks: [],
-        logMessages: [],
-        stakeholders: [],
-        tags: [],
-        committed: null,
-        // A stamp, not a computation (AD-4).
-        todoSince: toDay(now),
-        doneAt: null,
-        death: null,
+    this.#ui = {
+      ...this.#ui,
+      open: { kind: "task", id: newTaskId(), draft: true, project },
+      asked: [],
+    };
+  }
+
+  /**
+   * The draft becomes real — written to the store with its first title, and the
+   * sheet keeps pointing at it as an ordinary (no-longer-draft) entity, so the
+   * next keystroke saves as usual. The id is the one the draft already carried,
+   * so focus and the open sheet do not jump.
+   */
+  async #materialiseDraft(
+    open: NonNullable<UiState["open"]>,
+    title: string,
+    now: Date,
+  ): Promise<void> {
+    if (open.kind === "project") {
+      await this.#store.mutate((d) => {
+        d.projects.push({
+          id: open.id as ProjectId,
+          title,
+          description: "",
+          deadline: null,
+          stakeholders: [],
+          tags: [],
+          logMessages: [],
+        });
+        return { touched: ["projects"] };
       });
-      return { touched: ["tasks"] };
-    });
-    // The sheet opens on it, focused on the title — an untitled task is not a
-    // thing he must go find and name later.
-    this.#ui = { ...this.#ui, open: { kind: "task", id } };
+    } else {
+      const project = (open.project ?? INBOX_PROJECT_ID) as ProjectId;
+      await this.#store.mutate((d) => {
+        if (!d.projects.some((p) => p.id === project)) return { touched: [] };
+        d.tasks.push({
+          id: open.id as TaskId,
+          title,
+          description: "",
+          project,
+          deadline: null,
+          status: "todo",
+          subtasks: [],
+          logMessages: [],
+          stakeholders: [],
+          tags: [],
+          committed: null,
+          todoSince: toDay(now), // a stamp, not a computation (AD-4)
+          doneAt: null,
+          death: null,
+        });
+        return { touched: ["tasks"] };
+      });
+    }
+    // No longer a draft: it exists now, edits flow the normal path.
+    this.#ui = { ...this.#ui, open: { kind: open.kind, id: open.id } };
   }
 
   async #resolveCapture(
