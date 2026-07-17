@@ -63,6 +63,8 @@ export interface BandVm {
   /** Unsorted only: captures are raw pips on the BAND, with no strip. */
   captures: { id: CaptureId; text: string; ageDays: number }[];
   oldestCaptureDays: number | null;
+  /** ARCHIVED band only: folded by default, its header toggles it. */
+  folded?: boolean;
 }
 
 export interface BacklogVm {
@@ -144,6 +146,13 @@ export interface SheetVm {
   rail: RailItem[];
   /** A task can die. So can a project. Both carry a reason. */
   death: { reason: string; at: string } | null;
+  /**
+   * A project sheet's endings (null on a task sheet). Which are OFFERED depends
+   * on state: `delete` only when empty (nothing to lose), `archive` only when
+   * finished (≥1 task, all done), `unarchive` only when already archived. The
+   * Inbox offers none.
+   */
+  projectActions: { canDelete: boolean; canArchive: boolean; isArchived: boolean } | null;
 }
 
 export interface DrainVm {
@@ -267,6 +276,14 @@ export type WebviewMessage =
   | { type: "closeSheet" }
   /** Unfold / fold a project's task list. A click, and it persists (a11y). */
   | { type: "toggleStrip"; id: ProjectId }
+  /** Put a finished project away — it leaves the live bands for ARCHIVED. */
+  | { type: "archiveProject"; id: ProjectId }
+  /** Bring an archived project back to a live band. */
+  | { type: "unarchiveProject"; id: ProjectId }
+  /** Delete an EMPTY project — no tasks, nothing to lose. Refused if it holds any. */
+  | { type: "deleteProject"; id: ProjectId }
+  /** Fold / unfold the ARCHIVED band. */
+  | { type: "toggleArchived" }
   | { type: "newProject" }
   /**
    * A task born ON a strip, with a project from birth.

@@ -9,7 +9,7 @@ import { isOpen, urgencyOf, urgencyRank, type UrgencySignal } from "./urgency.ts
  * predicate and count, so nothing is ever on screen without a stated reason.
  */
 
-export type BandKind = "unsorted" | "now" | "soon" | "waiting" | "rotting" | "quiet";
+export type BandKind = "unsorted" | "now" | "soon" | "waiting" | "rotting" | "quiet" | "archived";
 
 export interface BandDef {
   kind: BandKind;
@@ -27,6 +27,9 @@ export const BANDS: readonly BandDef[] = [
   { kind: "waiting", label: "WAITING ON SOMEONE", predicate: "a person owes the move" },
   { kind: "rotting", label: "ROTTING", predicate: "untouched ≥14d" },
   { kind: "quiet", label: "QUIET", predicate: "nothing to compute from" },
+  // Last, and folded by default in the UI. Put away, not gone — un-archive
+  // brings it back to a live band. Ordered after everything live on purpose.
+  { kind: "archived", label: "ARCHIVED", predicate: "put away, done with" },
 ];
 
 const SOON_DAYS = 21;
@@ -144,7 +147,10 @@ export function shelf(data: Dataset, now: Day): Band[] {
       done: tasks.filter((t) => t.status === "done").length,
       total: tasks.filter((t) => t.death === null).length,
     };
-    byKind.get(bandFor(signal, tasks, data, now))!.push(strip);
+    // An archived project leaves the live bands entirely — its urgency no longer
+    // pulls the eye. It gathers in ARCHIVED, whatever its tasks would compute to.
+    const kind = project.archived !== null ? "archived" : bandFor(signal, tasks, data, now);
+    byKind.get(kind)!.push(strip);
   }
 
   for (const strips of byKind.values()) {

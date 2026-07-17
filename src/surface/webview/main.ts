@@ -245,9 +245,16 @@ function stripTasksEl(s: StripVm): HTMLElement {
 }
 
 function bandEl(b: BandVm, sheet: SheetVm | null): HTMLElement {
-  const band = el("div", `band ${b.kind}`);
+  const foldable = b.folded !== undefined; // the ARCHIVED band
+  const band = el("div", `band ${b.kind}${foldable && b.folded ? " folded" : ""}`);
 
   const h = el("div", "band-h");
+  if (foldable) {
+    // The ARCHIVED band folds — a chevron in front of its name, header toggles.
+    h.append(el("span", "chev", b.folded ? "▸" : "▾"));
+    h.style.cursor = "pointer";
+    h.onclick = () => post({ type: "toggleArchived" });
+  }
   h.append(el("span", "band-name", b.label), el("span", "band-why", b.predicate));
 
   const n = el("span", "band-n");
@@ -261,6 +268,9 @@ function bandEl(b: BandVm, sheet: SheetVm | null): HTMLElement {
   }
   h.append(n);
   band.append(h);
+
+  // Folded: header only, strips hidden. Nothing below is drawn.
+  if (foldable && b.folded) return band;
 
   if (b.kind === "unsorted" && b.captures.length > 0) {
     // Captures are raw pips ON THE BAND, with no strip. A band is not a project
@@ -485,6 +495,33 @@ function sheetEl(s: SheetVm): HTMLElement {
     };
     dieBar.append(die);
     ed.append(dieBar);
+  }
+
+  // A project's endings: archive (finished), delete (empty), unarchive (put back).
+  // Only the ones the state allows are shown — the sheet never offers a dead end.
+  if (s.kind === "project" && s.projectActions) {
+    const a = s.projectActions;
+    const bar = el("div", "die-bar");
+    if (a.isArchived) {
+      const un = el("button", "depth-b");
+      un.textContent = "↩ un-archive";
+      un.onclick = () => post({ type: "unarchiveProject", id: s.id as never });
+      bar.append(un);
+    } else if (a.canArchive) {
+      const arch = el("button", "depth-b");
+      arch.textContent = "▣ archive (finished)";
+      arch.title = "every task is done — put this project away";
+      arch.onclick = () => post({ type: "archiveProject", id: s.id as never });
+      bar.append(arch);
+    }
+    if (a.canDelete) {
+      const del = el("button", "depth-b die");
+      del.textContent = "⊗ delete (empty)";
+      del.title = "no tasks — remove this project";
+      del.onclick = () => post({ type: "deleteProject", id: s.id as never });
+      bar.append(del);
+    }
+    if (bar.children.length > 0) ed.append(bar);
   }
 
   // death: purple, never red. An ending, not a failure.

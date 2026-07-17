@@ -73,6 +73,14 @@ export interface Project {
   /** Carries the grouping load milestones used to. */
   tags: string[];
   logMessages: LogMessage[];
+  /**
+   * STAMPED when the project is put away — a finished project (all tasks done)
+   * he no longer wants on the shelf. null = active. It leaves the live bands and
+   * gathers in a folded "Archived" band; nothing is destroyed, and un-archiving
+   * is one click. A distinct ending from a task's `death`: an archive is "done
+   * with", not "abandoned".
+   */
+  archived: Instant | null;
 }
 
 export interface Task {

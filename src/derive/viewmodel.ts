@@ -65,6 +65,8 @@ export interface UiState {
    * old hover). Never persisted to disk; it is view state.
    */
   expanded: string[];
+  /** The ARCHIVED band is folded by default; this remembers when he opens it. */
+  archivedOpen: boolean;
   /**
    * FR-20 — how many weeks BACK the report is viewing. 0 is this week; the
    * stepper is bounded at six, so this never exceeds 5. It affects the REPORT
@@ -149,6 +151,7 @@ export function backlogVm(
   chords: ChordMap = DEFAULT_CHORDS,
   asked: SheetField[] = [],
   expanded: string[] = [],
+  archivedOpen = false,
 ): BacklogVm {
   const bands = shelf(data, now);
   const unsorted = data.captures.filter((c) => c.state === "unsorted");
@@ -189,10 +192,14 @@ export function backlogVm(
           }))
         : [],
     oldestCaptureDays: b.oldestCaptureDays,
+    ...(b.def.kind === "archived" ? { folded: !archivedOpen } : {}),
   }));
 
-  const shownProjects = vm.reduce((n, b) => n + b.strips.length, 0);
-  const totalProjects = data.projects.length;
+  // Archived projects are not part of the "living work" count — they left it.
+  const shownProjects = vm
+    .filter((b) => b.kind !== "archived")
+    .reduce((n, b) => n + b.strips.length, 0);
+  const totalProjects = data.projects.filter((p) => p.archived === null).length;
 
   let sheet: BacklogVm["sheet"] = null;
   if (open) {
@@ -377,7 +384,7 @@ export function buildViewModel(
     rootKind: ui.rootKind,
     backlog:
       ui.mode === "backlog"
-        ? backlogVm(data, now, week, ui.drainOpen, ui.captureChord, ui.open, ui.chords, ui.asked, ui.expanded)
+        ? backlogVm(data, now, week, ui.drainOpen, ui.captureChord, ui.open, ui.chords, ui.asked, ui.expanded, ui.archivedOpen)
         : null,
     kanban: ui.mode === "kanban" ? kanbanVm(data, now, week) : null,
     report:

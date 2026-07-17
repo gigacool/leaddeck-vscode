@@ -144,6 +144,7 @@ export class Workbench {
       open: null,
       asked: [],
       expanded: [],
+      archivedOpen: false,
       weekOffset: 0,
       root: store.root,
       rootKind,
@@ -223,6 +224,7 @@ export class Workbench {
         stakeholders: [],
         tags: [],
         logMessages: [],
+        archived: null,
       };
       return { ...d, projects: [...d.projects, draft] };
     }
@@ -356,6 +358,26 @@ export class Workbench {
         return;
       }
 
+      case "archiveProject":
+        await this.#setArchived(m.id, now.toISOString());
+        this.render();
+        return;
+
+      case "unarchiveProject":
+        await this.#setArchived(m.id, null);
+        this.render();
+        return;
+
+      case "deleteProject":
+        await this.#deleteProject(m.id);
+        this.render();
+        return;
+
+      case "toggleArchived":
+        this.#ui = { ...this.#ui, archivedOpen: !this.#ui.archivedOpen };
+        this.render();
+        return;
+
       case "newProject":
         await this.#newProject();
         this.render();
@@ -455,6 +477,7 @@ export class Workbench {
           stakeholders: [],
           tags: [],
           logMessages: [],
+          archived: null,
         });
         return { touched: ["projects"] };
       });
@@ -603,6 +626,33 @@ export class Workbench {
       t.committed = weekOf === null ? null : { weekOf };
       return { touched: ["tasks"] };
     });
+  }
+
+  /** Archive (stamp) or un-archive (null) a project. */
+  async #setArchived(id: string, at: string | null): Promise<void> {
+    await this.#store.mutate((d) => {
+      const p = d.projects.find((x) => x.id === id);
+      // The Inbox is machinery, not a project he archives.
+      if (!p || p.id === INBOX_PROJECT_ID) return { touched: [] };
+      p.archived = at;
+      return { touched: ["projects"] };
+    });
+  }
+
+  /**
+   * Delete an EMPTY project — no tasks, nothing to lose. A project with tasks is
+   * refused (archive it instead); the Inbox is never deletable. Also drops the
+   * id from `expanded` so no stale fold state lingers.
+   */
+  async #deleteProject(id: string): Promise<void> {
+    if (id === INBOX_PROJECT_ID) return;
+    if (this.#store.data.tasks.some((t) => t.project === id)) return; // not empty
+    await this.#store.mutate((d) => {
+      const before = d.projects.length;
+      d.projects = d.projects.filter((p) => p.id !== id);
+      return { touched: d.projects.length !== before ? ["projects"] : [] };
+    });
+    this.#ui = { ...this.#ui, expanded: this.#ui.expanded.filter((x) => x !== id) };
   }
 
   /** Re-home a task to another project (its only drag). No re-order. */

@@ -153,6 +153,9 @@ export function validateProject(v: unknown, c: Ctx): Project {
     logMessages: arr(o["logMessages"] ?? [], at(c, "logMessages")).map((m, i) =>
       logMessage(m, at(at(c, "logMessages"), i)),
     ),
+    // Optional and back-compatible: a project written before archiving existed
+    // has no `archived` key and loads as active.
+    archived: nullable(o["archived"] ?? null, at(c, "archived"), instant),
   };
 }
 

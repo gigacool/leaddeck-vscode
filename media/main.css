@@ -277,6 +277,11 @@ body {
 .band.unsorted .band-name { color: color-mix(in srgb, var(--warn) 60%, var(--fg)); }
 .band.unsorted .band-n { color: var(--warn); font-weight: 700; }
 
+/* ARCHIVED — muted, foldable, and out of the way at the bottom. */
+.band.archived .band-h { border-left-color: var(--border-strong); background: color-mix(in srgb, var(--page) 70%, var(--ink)); }
+.band.archived .band-name { color: var(--fg-dim); }
+.band.archived .chev { color: var(--fg-dim); }
+
 /* ---- strips ---- */
 
 /*

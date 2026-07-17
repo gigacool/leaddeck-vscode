@@ -1,6 +1,6 @@
 import { addWeeks } from "../model/dates.ts";
 import type { RailItem, SheetField, SheetVm, SignalVm } from "../model/protocol.ts";
-import type { Day, Dataset, Project, Task, Week } from "../model/types.ts";
+import { INBOX_PROJECT_ID, type Day, type Dataset, type Project, type Task, type Week } from "../model/types.ts";
 import { urgencyOf, type UrgencySignal } from "./urgency.ts";
 
 /**
@@ -182,6 +182,7 @@ export function taskSheet(
           chords,
         ),
     death: task.death,
+    projectActions: null, // a task is not a project
   };
 }
 
@@ -248,6 +249,17 @@ export function projectSheet(
     fields: present,
     rail: SHOW_ALL ? [] : railFor(present, PROJECT_FIELDS, chords),
     death: null,
+    projectActions:
+      project.id === INBOX_PROJECT_ID
+        ? { canDelete: false, canArchive: false, isArchived: false } // Inbox: no endings
+        : {
+            // Empty ⇒ deletable (nothing to lose). `tasks` already excludes dead
+            // ones, so a project of only-dead tasks counts as empty too.
+            canDelete: tasks.length === 0,
+            // Finished ⇒ archivable: at least one task, and every one is done.
+            canArchive: tasks.length > 0 && tasks.every((t) => t.status === "done"),
+            isArchived: project.archived !== null,
+          },
   };
 }
 

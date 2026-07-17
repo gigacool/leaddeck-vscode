@@ -148,8 +148,14 @@
     return list;
   }
   function bandEl(b, sheet) {
-    const band = el("div", `band ${b.kind}`);
+    const foldable = b.folded !== void 0;
+    const band = el("div", `band ${b.kind}${foldable && b.folded ? " folded" : ""}`);
     const h = el("div", "band-h");
+    if (foldable) {
+      h.append(el("span", "chev", b.folded ? "\u25B8" : "\u25BE"));
+      h.style.cursor = "pointer";
+      h.onclick = () => post({ type: "toggleArchived" });
+    }
     h.append(el("span", "band-name", b.label), el("span", "band-why", b.predicate));
     const n = el("span", "band-n");
     if (b.kind === "unsorted") {
@@ -161,6 +167,7 @@
     }
     h.append(n);
     band.append(h);
+    if (foldable && b.folded) return band;
     if (b.kind === "unsorted" && b.captures.length > 0) {
       const row = el("div", "unsorted-pips");
       row.append(el("span"), el("span"));
@@ -317,6 +324,30 @@
       };
       dieBar.append(die);
       ed.append(dieBar);
+    }
+    if (s.kind === "project" && s.projectActions) {
+      const a = s.projectActions;
+      const bar = el("div", "die-bar");
+      if (a.isArchived) {
+        const un = el("button", "depth-b");
+        un.textContent = "\u21A9 un-archive";
+        un.onclick = () => post({ type: "unarchiveProject", id: s.id });
+        bar.append(un);
+      } else if (a.canArchive) {
+        const arch = el("button", "depth-b");
+        arch.textContent = "\u25A3 archive (finished)";
+        arch.title = "every task is done \u2014 put this project away";
+        arch.onclick = () => post({ type: "archiveProject", id: s.id });
+        bar.append(arch);
+      }
+      if (a.canDelete) {
+        const del = el("button", "depth-b die");
+        del.textContent = "\u2297 delete (empty)";
+        del.title = "no tasks \u2014 remove this project";
+        del.onclick = () => post({ type: "deleteProject", id: s.id });
+        bar.append(del);
+      }
+      if (bar.children.length > 0) ed.append(bar);
     }
     if (s.kind === "task") {
       const die = el("div", `die${s.death ? " open" : ""}`);

@@ -39,6 +39,7 @@ export function aProject(over: Partial<Project> = {}): Project {
     stakeholders: [],
     tags: [],
     logMessages: [],
+    archived: null,
     ...over,
   };
 }
@@ -67,6 +68,7 @@ export function dataset(over: Partial<Dataset> = {}): Dataset {
     stakeholders: [],
     tags: [],
     logMessages: [],
+    archived: null,
   };
   return {
     projects: [inbox],

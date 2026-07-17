@@ -144,6 +144,7 @@ export class Store {
       stakeholders: [],
       tags: [],
       logMessages: [],
+      archived: null,
     });
   }
 
