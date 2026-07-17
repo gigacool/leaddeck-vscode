@@ -36,6 +36,13 @@ export interface StripVm {
   signal: SignalVm;
   /** `↑ Sarah` / `↓ 6 reports` / `—`. Direction is half of urgency. */
   who: { glyph: "↑" | "↓" | "—"; label: string } | null;
+  /**
+   * Whether the readable task list is unfolded. Now a CLICK toggles it (not
+   * hover), and the state persists across paints — so it lives in the view
+   * model, not in a `:hover` the DOM forgets. A11y over density: eyes that tire
+   * need the titles to stay open, not to vanish when the cursor moves.
+   */
+  open: boolean;
 }
 
 /** A signal is already rendered to text here — the webview never computes. */
@@ -251,6 +258,8 @@ export type WebviewMessage =
   /* ---- the sheet ---- */
   | { type: "openSheet"; kind: "task" | "project"; id: TaskId | ProjectId }
   | { type: "closeSheet" }
+  /** Unfold / fold a project's task list. A click, and it persists (a11y). */
+  | { type: "toggleStrip"; id: ProjectId }
   | { type: "newProject" }
   /**
    * A task born ON a strip, with a project from birth.

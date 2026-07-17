@@ -94,7 +94,7 @@
    * whole thing. Eyes still struggling? Raise --fz; nothing else moves.
    * The floor was lifted too: the old --fs-xs replaces 8.5–9.5px noise.
    */
-  --fz: 1.15;
+  --fz: 1;
   --fs-xs: calc(11px * var(--fz));
   --fs-sm: calc(12.5px * var(--fz));
   --fs-md: calc(14px * var(--fz));
@@ -263,24 +263,39 @@ body {
  */
 .strip, .unsorted-pips {
   display: grid;
-  /* The 5th column is `＋ task`. .unsorted-pips gets it too — as an empty
-     spacer — because the shared alignment above is the whole point. */
-  grid-template-columns: 15px minmax(150px, 215px) minmax(0, 1fr) 16px auto;
+  /* chevron · name · pips · ✎edit · ＋task · right. .unsorted-pips reuses the
+     same track set (empty spacers) so the columns line up across the shelf. */
+  grid-template-columns: 16px minmax(150px, 215px) minmax(0, 1fr) 16px 16px auto;
   gap: 9px;
   align-items: center;
   padding: 5px 12px 5px 10px;
   border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, var(--bg));
+  cursor: pointer; /* the whole row folds/unfolds */
 }
 .strip:last-child { border-bottom: 0; }
 .strip:hover { background: var(--hover); }
 
+/* The fold chevron — states open/closed, so the row reads as expandable. */
+.chev { font-family: var(--mono); font-size: var(--fs-sm); color: var(--fg-dim); line-height: 1; user-select: none; text-align: center; }
+.strip-wrap.open .chev { color: var(--fg); }
+
+/* ✎ edit the project — quiet until the row is hovered, then reachable. */
+.p-edit {
+  background: 0; border: 0; padding: 0; cursor: pointer;
+  font-family: var(--mono); font-size: var(--fs-sm); line-height: 1;
+  color: transparent; transition: color .1s;
+}
+.strip:hover .p-edit { color: var(--fg-faint); }
+.p-edit:hover { color: var(--fg) !important; }
+.p-edit:focus-visible { color: var(--fg); outline: 1px solid var(--accent-2); outline-offset: 1px; }
+
 .grip { font-family: var(--mono); font-size: var(--fs-sm); color: var(--border-strong); line-height: 1; user-select: none; letter-spacing: -1px; }
 .strip:hover .grip { color: var(--fg-faint); }
 
-/* Project names are the shelf's anchors — big, weighty, uppercase, so the eye
-   lands on them first and the list reads as a set of places, not a wall. */
+/* Project names are the shelf's anchors — weight + uppercase carry them, no
+   need for a bigger size (Cédric's call: --fs-xs at 600 is enough). */
 .p-name {
-  font-size: var(--fs-md); font-weight: 700; letter-spacing: .02em; text-transform: uppercase;
+  font-size: var(--fs-xs); font-weight: 600; letter-spacing: .03em; text-transform: uppercase;
   color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
@@ -340,11 +355,10 @@ body {
 .strip-wrap .strip { border-bottom: 0; } /* the wrapper owns the divider now */
 
 /*
- * Collapsed to ZERO height at rest — density is the feature, so nothing shows,
- * and nothing reserves space, until he hovers. The `0fr → 1fr` grid-row unfold
- * needs exactly ONE collapsible child (.st-inner) with overflow:hidden and
- * min-height:0; the rows live inside it. `visibility` was the earlier mistake —
- * it hid the rows but kept their box, leaving the residual band.
+ * Collapsed to ZERO height when folded — a CLICK toggles `.open` on the wrapper
+ * (was hover), and it persists. The `0fr → 1fr` grid-row unfold needs exactly
+ * ONE collapsible child (.st-inner) with overflow:hidden and min-height:0; the
+ * rows live inside it.
  */
 .strip-tasks {
   display: grid; grid-template-rows: 0fr;
@@ -352,12 +366,13 @@ body {
   background: color-mix(in srgb, var(--chrome) 60%, var(--bg));
 }
 .st-inner { overflow: hidden; min-height: 0; }
-.strip-wrap:hover .strip-tasks { grid-template-rows: 1fr; }
+.strip-wrap.open .strip-tasks { grid-template-rows: 1fr; }
 
 .st-row {
-  display: flex; align-items: center; gap: 8px;
-  padding: 1.5px 10px 1.5px 34px; /* indent under the project name */
+  display: flex; align-items: center; gap: 10px;
+  padding: 3px 10px 3px 36px; /* indent under the project name */
   font-size: var(--fs-sm);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, var(--bg));
 }
 .st-row:hover { background: var(--hover); }
 .st-title {

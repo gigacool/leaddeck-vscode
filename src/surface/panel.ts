@@ -105,6 +105,7 @@ export class Workbench {
       drainOpen: false,
       open: null,
       asked: [],
+      expanded: [],
       weekOffset: 0,
       root: store.root,
       rootKind,
@@ -299,6 +300,18 @@ export class Workbench {
         this.#ui = { ...this.#ui, open: null, asked: [] };
         this.render();
         return;
+
+      case "toggleStrip": {
+        // Click folds/unfolds; the state persists across paints (a11y — the
+        // titles stay open, they don't vanish when the cursor moves).
+        const ex = this.#ui.expanded;
+        this.#ui = {
+          ...this.#ui,
+          expanded: ex.includes(m.id) ? ex.filter((x) => x !== m.id) : [...ex, m.id],
+        };
+        this.render();
+        return;
+      }
 
       case "newProject":
         await this.#newProject();

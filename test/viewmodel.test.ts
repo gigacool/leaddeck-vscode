@@ -21,6 +21,7 @@ const ui = (over: Partial<UiState> = {}): UiState => ({
   drainOpen: false,
   open: null,
   asked: [],
+  expanded: [],
   weekOffset: 0,
   root: "/home/cedric/LeadDeck",
   rootKind: "home",

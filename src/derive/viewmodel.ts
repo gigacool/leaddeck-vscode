@@ -59,6 +59,13 @@ export interface UiState {
    */
   asked: SheetField[];
   /**
+   * Ids of projects whose task list is unfolded. A click toggles membership,
+   * and it persists across paints — the readable titles stay open until he
+   * folds them, rather than vanishing when the cursor leaves (a11y over the
+   * old hover). Never persisted to disk; it is view state.
+   */
+  expanded: string[];
+  /**
    * FR-20 — how many weeks BACK the report is viewing. 0 is this week; the
    * stepper is bounded at six, so this never exceeds 5. It affects the REPORT
    * only: backlog and kanban are always "now", because stepping them back would
@@ -141,6 +148,7 @@ export function backlogVm(
   open: UiState["open"] = null,
   chords: ChordMap = DEFAULT_CHORDS,
   asked: SheetField[] = [],
+  expanded: string[] = [],
 ): BacklogVm {
   const bands = shelf(data, now);
   const unsorted = data.captures.filter((c) => c.state === "unsorted");
@@ -165,6 +173,7 @@ export function backlogVm(
       total: s.total,
       signal: signalVm(s.signal),
       who: whoVm(s.tasks.filter(isOpen), data),
+      open: expanded.includes(s.project.id),
     })),
     captures:
       b.def.kind === "unsorted"
@@ -363,7 +372,7 @@ export function buildViewModel(
     rootKind: ui.rootKind,
     backlog:
       ui.mode === "backlog"
-        ? backlogVm(data, now, week, ui.drainOpen, ui.captureChord, ui.open, ui.chords, ui.asked)
+        ? backlogVm(data, now, week, ui.drainOpen, ui.captureChord, ui.open, ui.chords, ui.asked, ui.expanded)
         : null,
     kanban: ui.mode === "kanban" ? kanbanVm(data, now, week) : null,
     report:

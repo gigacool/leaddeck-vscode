@@ -99,31 +99,37 @@ function pipEl(p: { id: string; title: string; state: string; wk: boolean }): HT
 }
 
 function stripEl(s: StripVm): HTMLElement {
-  // The wrapper holds the dense bar AND the readable list that unfolds under it
-  // on hover (FR-13 + readability). The bar stays the at-a-glance view; the list
-  // is where a pip becomes a title he can act on — so nothing changes until he
-  // hovers, and density is untouched.
-  const wrap = el("div", "strip-wrap");
+  // The wrapper holds the dense bar AND the readable task list. A CLICK on the
+  // row now folds/unfolds that list (was hover), and the state persists — the
+  // titles stay open until he folds them. Editing the project moved to its own
+  // ✎ button, so the primary click is the one he asked for.
+  const wrap = el("div", `strip-wrap${s.open ? " open" : ""}`);
 
   const row = el("div", "strip");
-  row.onclick = () => post({ type: "openSheet", kind: "project", id: s.id });
-  // NOT a drag grip. `⣿` advertised a reorder that cannot exist: THE BAND IS
-  // THE SORT, and a manual order would be priority coming back wearing a
-  // costume — the concept the design removed first. A glyph that offers a
-  // gesture the tool refuses is the same lie as a button that does nothing.
-  row.append(el("span", "grip", "·"), el("span", "p-name", s.title));
+  row.onclick = () => post({ type: "toggleStrip", id: s.id });
+  // A chevron states the fold, so the row reads as expandable, not as a mystery.
+  row.append(el("span", "chev", s.open ? "▾" : "▸"), el("span", "p-name", s.title));
 
   const pips = el("div", "pips");
   for (const p of s.pips) pips.append(pipEl(p));
   row.append(pips);
 
+  // Edit the project itself — a distinct gesture from folding its tasks.
+  const edit = el("button", "p-edit", "✎");
+  edit.title = "edit this project";
+  edit.onclick = (e) => {
+    e.stopPropagation(); // else the row's click folds/unfolds instead.
+    post({ type: "openSheet", kind: "project", id: s.id });
+  };
+  row.append(edit);
+
   // The way work is born on a strip he is already looking at. Without it the
   // drain is the only road onto the shelf, and a project he just made is a dead
-  // end. Stays quiet until the row is hovered — an offer, not a chore.
+  // end.
   const addTask = el("button", "p-add", "＋");
   addTask.title = "add a task to this project";
   addTask.onclick = (e) => {
-    e.stopPropagation(); // else the strip's own click opens the project sheet.
+    e.stopPropagation(); // else the strip's own click folds/unfolds.
     post({ type: "newTask", project: s.id as never });
   };
   row.append(addTask);
@@ -239,9 +245,9 @@ function bandEl(b: BandVm, sheet: SheetVm | null): HTMLElement {
       p.title = c.text;
       pips.append(p);
     }
-    // Four spacers + pips = the strip's five columns. A capture has no `＋`:
-    // it has no project to add a task to — that is what the drain is for.
-    row.append(pips, el("span"), el("span"));
+    // Five spacers + pips = the strip's six columns (chev·name·pips·✎·＋·right).
+    // A capture has no ✎ and no ＋: it has no project — that is the drain's job.
+    row.append(pips, el("span"), el("span"), el("span"));
     band.append(row);
   }
 

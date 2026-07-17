@@ -46,13 +46,20 @@
     return n;
   }
   function stripEl(s) {
-    const wrap = el("div", "strip-wrap");
+    const wrap = el("div", `strip-wrap${s.open ? " open" : ""}`);
     const row = el("div", "strip");
-    row.onclick = () => post({ type: "openSheet", kind: "project", id: s.id });
-    row.append(el("span", "grip", "\xB7"), el("span", "p-name", s.title));
+    row.onclick = () => post({ type: "toggleStrip", id: s.id });
+    row.append(el("span", "chev", s.open ? "\u25BE" : "\u25B8"), el("span", "p-name", s.title));
     const pips = el("div", "pips");
     for (const p of s.pips) pips.append(pipEl(p));
     row.append(pips);
+    const edit = el("button", "p-edit", "\u270E");
+    edit.title = "edit this project";
+    edit.onclick = (e) => {
+      e.stopPropagation();
+      post({ type: "openSheet", kind: "project", id: s.id });
+    };
+    row.append(edit);
     const addTask = el("button", "p-add", "\uFF0B");
     addTask.title = "add a task to this project";
     addTask.onclick = (e) => {
@@ -141,7 +148,7 @@
         p.title = c.text;
         pips.append(p);
       }
-      row.append(pips, el("span"), el("span"));
+      row.append(pips, el("span"), el("span"), el("span"));
       band.append(row);
     }
     for (const s of b.strips) {
