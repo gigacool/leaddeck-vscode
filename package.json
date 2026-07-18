@@ -6,13 +6,19 @@
   "private": true,
   "type": "module",
   "publisher": "cedric",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.105.0"
   },
   "categories": [
     "Other"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gigacool/leaddeck-vscode.git"
+  },
   "main": "./dist/extension.cjs",
+  "activationEvents": [],
   "scripts": {
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",

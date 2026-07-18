@@ -1,36 +1,31 @@
 # LeadDeck
 
-A VS Code extension for one person. Capture, Organize, Review, Engage.
+**Capture, organize, review, engage — one webview inside VS Code.**
 
-Not a task tracker — an efficiency instrument for someone carrying 10–20 parallel projects who has accepted the overload. *Which is exactly why it must never cost more than it returns.*
+LeadDeck is a lightweight command center for people juggling many small projects at once. It isn't a task tracker with statuses and priority flags. It's a place to *dump* a thought in two seconds while you're mid-work, then — once a week, deliberately — organize what you dumped, review what's urgent, and write the update that's actually owed.
 
-## Status
+It's built for someone carrying 10–20 parallel projects who has accepted the overload. Which is exactly why it stays out of your way: it must never cost more than it returns.
 
-**All four layers built.** 87 tests. Press `F5` to run it.
+## Why it's different
 
-| | |
+- **Priority is dead.** When everything is "high," priority stops meaning anything. LeadDeck doesn't ask you to rank things — urgency is *computed* from deadlines and what you've committed to this week. There's no field to argue with.
+- **Capturing and organizing are separate on purpose.** Capture is instant and dumb — a keystroke from anywhere. Organizing is a calmer, weekly activity. Keeping them apart is what makes the capture worth using.
+- **Your data is yours.** Everything is plain JSON in a folder you own. No database, no cloud, no account. It's diffable, `git init`-able, and readable without the extension.
+
+## Getting started
+
+After installing, open the command palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and run **LeadDeck: Open Workbench**, or use the keyboard shortcuts below.
+
+| Shortcut | Action |
 |---|---|
-| `Ctrl+Alt+L` | capture — from anywhere, without leaving what you're doing |
-| `Ctrl+Alt+K` | open the workbench |
+| `Ctrl+Alt+L` (`Cmd+Alt+L` on macOS) | **Capture** — jot something down from anywhere, without leaving what you're doing |
+| `Ctrl+Alt+O` (`Cmd+Alt+O` on macOS) | **Open the workbench** — the main view where you organize and review |
 
-A command + keybinding is the entry point on purpose: an Activity Bar icon **cannot** open an editor webview, and the sidebar's width fights the shelf — 17 projects and 63 tasks have to fit above the fold.
+There's also a **LeadDeck** icon in the Activity Bar for quick access, and a **LeadDeck: Celebrate 🎉** command for when you close something out.
 
-**Not built yet:** the editor sheet (FR-23–28), the `＋` rail, commit-to-week from the shelf, the burndown, the six-week stepper, export.
+## Where your data lives
 
-## The laws
-
-These are not preferences. Each one was decided against a documented failure, and **every one of them will look like an improvement when it comes back.**
-
-- **Priority is dead.** With 10–20 projects, everything becomes "high" — a signal that doesn't discriminate stops being a signal. The only judgment authored is `committed: weekOf`. Urgency is **computed**; there is no field to argue with.
-- **Capture ≠ Organize.** Capture is 2 seconds and dumb. Organize is Friday and rich. Fusing them is what killed the last two attempts.
-- **Pull inserts a stub, never a sentence.** ~80% of the Friday report is prose the app cannot write. It works *precisely to the extent it doesn't help*. Test any change: *does it reduce what he types?* If yes — **refuse it.**
-- **A project has one deadline.** Multiple deadlines means it's several projects, grouped by tag.
-- **The retrospective is an export, not a feature.** The app owes data, not opinions.
-- **If the iteration stepper grows a date range, a filter, or a compare control** — it has become the analytics panel v1 died of. **Delete the stepper. Do not extend it.**
-
-## Your data
-
-Plain JSON in a folder you own. No database, no index, no event log, no cache.
+By default, LeadDeck keeps everything under a `LeadDeck` folder in your home directory:
 
 ```
 ~/LeadDeck/
@@ -38,32 +33,30 @@ Plain JSON in a folder you own. No database, no index, no event log, no cache.
   reports/2026-W29.md
 ```
 
-Diffable. `git init`-able. Readable without the extension. A `.leaddeck/` folder in a workspace overrides the global root — **exactly one is ever live**, never merged, and the workbench header always names which.
+Everything is human-readable JSON and Markdown. Back it up, version it, or open it in any editor — it's just files.
 
-## Develop
+**Per-project storage.** If a workspace contains a `.leaddeck/` folder, LeadDeck uses that instead of the global folder, so a project can carry its own deck. Exactly one location is ever live — never merged — and the workbench header always tells you which one you're looking at.
 
-Requires Node 20+ (Node 24 recommended — it matches what VS Code ships).
+## Settings
 
-```
-npm install
-npm run check     # typecheck + test
-npm run watch     # rebuild on change, then F5
-```
+| Setting | Description |
+|---|---|
+| `leaddeck.storagePath` | Storage root. Leave empty for `~/LeadDeck`. A `.leaddeck` folder in the workspace overrides both. |
 
-Tests run on Node's native TypeScript support — no compile step, no test framework.
+## Installing from a VSIX
 
-## Architecture
-
-The spine is [`ARCHITECTURE-SPINE.md`](../noosia/_bmad-output/planning-artifacts/architecture/architecture-leaddeck-v2-2026-07-15/ARCHITECTURE-SPINE.md) — 14 ADs. Read it before changing anything structural; the ADs record what each decision *prevents*, which is the part that isn't recoverable from the code.
-
-**Paradigm:** in-memory document store, a pure derivation layer, a one-way render pipe. The whole dataset fits in memory — that single fact is what lets the rest be this small.
+If you received a `.vsix` file directly:
 
 ```
-src/
-  model/     types + ids. Imports nothing.
-  store/     load, mutate, ordered atomic writes, watch.
-  derive/    urgency, bands, blocked, collisions. PURE — no vscode, no fs, no clock.
-  surface/   extension.ts, the one webview, the QuickPick. The only layer that owns `vscode`.
+code --install-extension leaddeck-2.0.0.vsix
 ```
 
-The dependency rule: **`derive/` importing `vscode` or `fs` is the paradigm breaking.** It's the one rule that keeps urgency testable.
+Or in VS Code: **Extensions** view → `⋯` menu → **Install from VSIX…**
+
+## For developers
+
+Architecture notes, the design laws, and build/packaging instructions live in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+[MIT](LICENSE) © 2026 Cédric Hartland

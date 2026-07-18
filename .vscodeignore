@@ -1,0 +1,18 @@
+# Source — shipped bundled in dist/ and media/, so the raw source isn't needed
+src/**
+test/**
+esbuild.mjs
+
+# TypeScript / tooling config
+tsconfig*.json
+.vscode/**
+.claude/**
+.gitignore
+
+# Dev-only docs & lockfile
+FEEDBACK-*.md
+CONTRIBUTING.md
+pnpm-lock.yaml
+
+# Source maps
+**/*.map
